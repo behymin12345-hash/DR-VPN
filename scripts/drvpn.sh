@@ -666,6 +666,16 @@ mtproto_logs_command()    { journalctl -u "$MTPROTO_SERVICE" "$@"; }
 mtproto_restart_command() { require_root; systemctl restart "$MTPROTO_SERVICE"; msg "MTProto proxy restarted."; }
 edit_mtproto_command()    { "${EDITOR:-nano}" "$MTPROTO_CONFIG"; systemctl restart "$MTPROTO_SERVICE"; msg "Config applied."; }
 
+mtproto_links_command() {
+    [[ -f "$MTPROTO_CONFIG" ]] || { err "MTProto proxy is not installed — run 'drvpn install-mtproto'."; exit 1; }
+    local secret port ip
+    secret="$(grep -oE 'secret = "[^"]+"' "$MTPROTO_CONFIG" | cut -d'"' -f2)"
+    port="$(grep -oE 'bind-to = "[^"]+:\([0-9]+\)"' "$MTPROTO_CONFIG" | grep -oE '[0-9]+$')"
+    ip="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo '<SERVER_IP>')"
+    echo "tg://proxy?server=${ip}&port=${port}&secret=${secret}"
+    echo "https://t.me/proxy?server=${ip}&port=${port}&secret=${secret}"
+}
+
 # ----------------------------- update ---------------------------------------
 
 update_command() {
@@ -797,7 +807,7 @@ Commands:
   node-status | node-logs | node-restart | uninstall-node
   install-mtproto   Install a Telegram MTProto proxy (mtg, --port/--cloak-domain)
   edit-mtproto   Edit the MTProto config (secret/port)
-  mtproto-status | mtproto-logs | mtproto-restart | uninstall-mtproto
+  mtproto-status | mtproto-logs | mtproto-restart | mtproto-links | uninstall-mtproto
   status      Show service status and health check
   logs [args] Follow/view service logs (journalctl passthrough)
   start|stop|restart   Manage the systemd service
@@ -841,6 +851,7 @@ main() {
         mtproto-status)   mtproto_status_command ;;
         mtproto-logs)     mtproto_logs_command "$@" ;;
         mtproto-restart)  mtproto_restart_command ;;
+        mtproto-links)    mtproto_links_command ;;
         edit-mtproto)     edit_mtproto_command ;;
         edit-env) edit_env_command ;;
         version)  version_command ;;
