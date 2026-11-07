@@ -173,3 +173,4 @@ deadlock-analysis.md
 .AGENT
 graphify-out
 .zcode/
+!.python-version

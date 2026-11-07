@@ -122,7 +122,7 @@ install_command() {
 
     # --- dependencies
     msg "Installing base dependencies…"
-    apt_install curl git ca-certificates cron >/dev/null 2>&1 || true
+    apt_install curl git ca-certificates cron build-essential libffi-dev >/dev/null 2>&1 || true
 
     if ! command -v uv >/dev/null 2>&1; then
         msg "Installing uv (Python toolchain manager)…"
