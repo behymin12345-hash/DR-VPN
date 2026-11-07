@@ -675,6 +675,10 @@ update_command() {
     backup_command --quiet || true
     msg "Updating source…"
     git -C "$APP_DIR" fetch --tags --force
+    # The appliance tree must stay pristine: uv sync can rewrite uv.lock and a
+    # stale local modification would block the merge. All real configuration
+    # lives in .env / the database, so resetting tracked files is safe.
+    git -C "$APP_DIR" checkout -- .
     git -C "$APP_DIR" pull --ff-only
     msg "Syncing dependencies…"
     (cd "$APP_DIR" && uv sync -q)
