@@ -253,7 +253,7 @@ WRAPPER
 
     # --- temp key + summary
     local temp_key=""
-    temp_key="$(cli_command generate-temp-key 2>/dev/null | tail -1 || true)"
+    temp_key="$(cli_command generate-temp-key 2>/dev/null | sed -n 's/^Temp key: //p' || true)"
     echo
     echo -e "${BOLD}${GREEN}=============================================="
     echo -e " DR-VPN installed successfully!"
