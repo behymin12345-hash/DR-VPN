@@ -83,6 +83,29 @@ service_exists() { systemctl list-unit-files 2>/dev/null | grep -q "^${SERVICE_N
 
 service_running() { systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; }
 
+install_dashboard_build() {
+    # Deploy the prebuilt dashboard from the matching GitHub release so the
+    # server never needs a Node/bun toolchain. $1 = requested ref (tag or main).
+    local zip_url tag asset
+    if [[ "$1" == main ]]; then
+        tag="$(curl -fsSL "https://api.github.com/repos/behymin12345-hash/DR-VPN/releases/latest" 2>/dev/null | grep -oE '"tag_name": *"[^"]+"' | head -1 | cut -d'"' -f4 || true)"
+        [[ -n "$tag" ]] || { err "Could not resolve the latest release for the dashboard build."; exit 1; }
+    else
+        tag="$1"
+    fi
+    asset="https://github.com/behymin12345-hash/DR-VPN/releases/download/${tag}/dashboard-build.zip"
+    msg "Deploying prebuilt dashboard (${tag})…"
+    if curl -fsSL -o /tmp/dashboard-build.zip "$asset"; then
+        apt_install unzip >/dev/null 2>&1 || true
+        unzip -oq /tmp/dashboard-build.zip -d "$APP_DIR/dashboard/"
+        rm -f /tmp/dashboard-build.zip
+    else
+        err "Could not download the dashboard build (${asset})."
+        err "Install bun manually and build it: cd ${APP_DIR}/dashboard && bun install && bun run build"
+        exit 1
+    fi
+}
+
 panel_version() {
     if [[ -f "$APP_DIR/app/version.py" ]]; then
         grep -oE '"?[0-9]+\.[0-9]+\.[0-9]+"?' "$APP_DIR/app/version.py" | tr -d '"' | head -1
@@ -200,6 +223,11 @@ install_command() {
     msg "Running database migrations…"
     (cd "$APP_DIR" && uv run alembic upgrade head >/dev/null 2>&1) || { err "Migrations failed."; exit 1; }
 
+    # --- prebuilt dashboard (the repo does not ship dashboard/build)
+    install_dashboard_build "$version"
+
+    # --- systemd service
+
     # --- systemd service
     msg "Creating systemd service…"
     cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<UNIT
@@ -234,13 +262,18 @@ exec bash /opt/dr-vpn/scripts/drvpn.sh "$@"
 WRAPPER
     chmod +x /usr/local/bin/drvpn
 
-    # wait for boot
+    # wait for boot — fail loudly with logs if it never comes up
     msg "Waiting for the panel to start…"
-    local host="127.0.0.1"
-    for _ in $(seq 1 30); do
-        if curl -sf "http://${host}:${port}/health" >/dev/null 2>&1; then break; fi
+    local host="127.0.0.1" healthy="false"
+    for _ in $(seq 1 45); do
+        if curl -sf "http://${host}:${port}/health" >/dev/null 2>&1; then healthy="true"; break; fi
         sleep 1
     done
+    if [[ "$healthy" != "true" ]]; then
+        err "The panel did not become healthy on port ${port}. Last service logs:"
+        journalctl -u "$SERVICE_NAME" -n 15 --no-pager || true
+        exit 1
+    fi
 
     # --- SSL (optional)
     if [[ -n "$ssl_domain" ]]; then
@@ -310,6 +343,7 @@ update_command() {
     git -C "$APP_DIR" pull --ff-only
     msg "Syncing dependencies…"
     (cd "$APP_DIR" && uv sync -q)
+    install_dashboard_build "v$(panel_version)"
     msg "Running migrations…"
     (cd "$APP_DIR" && uv run alembic upgrade head)
     msg "Restarting service…"

@@ -105,9 +105,10 @@ jobs:
 
     build-dashboard:
         runs-on: ubuntu-latest
-        # Builds the frontend from source only; no repo or registry writes.
+        # Builds the frontend; attaches it to the release so the native
+        # installer can deploy the dashboard without a Node toolchain.
         permissions:
-            contents: read
+            contents: write
         steps:
             - name: Checkout
               uses: actions/checkout@v7
@@ -130,6 +131,15 @@ jobs:
                   name: dashboard-build
                   path: ./dashboard/build/
                   retention-days: 1
+
+            - name: Attach dashboard build to the release
+              if: ${{ github.event_name == 'release' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  cd dashboard
+                  zip -qr ../dashboard-build.zip build
+                  gh release upload "${{ github.event.release.tag_name }}" ../dashboard-build.zip --clobber --repo "${{ github.repository }}"
 
     build-images:
         needs: build-dashboard
