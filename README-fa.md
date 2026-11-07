@@ -95,7 +95,7 @@ drvpn update                  # بکاپ -> pull -> مهاجرت -> ری‌اس�
 drvpn help
 ```
 
-گزینه‌های نصب (جواب ویزارد را از قبل می‌دهند): `--port`، `--ssl-domain example.com`،
+گزینه‌های نصب (جواب ویزارد را از قبل می‌دهند): `--port`، `--ssl-domain example.com` (نیازمند پورت 80)،
 `--no-ssl`، `--database sqlite|postgresql|mysql`، `--db-url`، `--version`، `--yes`
 (کاملاً بی‌صدا برای اتوماسیون). بدون SSL پنل فقط روی localhost سرو می‌شود
 (پیش‌فرض امنیتی) — دامنه را بعداً با `drvpn ssl` اضافه کنید.

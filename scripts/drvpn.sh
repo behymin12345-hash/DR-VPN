@@ -174,7 +174,7 @@ install_command() {
         # SSL / domain
         if [[ "$SSL_SET" != "true" ]]; then
             echo "SSL certificate:"
-            echo "  1) Domain with Let's Encrypt (needs DNS pointed here + port 8090 reachable)"
+            echo "  1) Domain with Let's Encrypt (needs DNS pointed here + port 80 reachable)"
             echo "  2) Custom certificate files"
             echo "  3) Skip (panel will be reachable on localhost only)"
             read -rp "Choose [3]: " ssl_choice
@@ -390,19 +390,27 @@ write_ssl_env() {  # write cert/key paths into .env and restart the service
 issue_letsencrypt_cert() {  # $1 = domain
     local domain="$1"
     msg "Setting up SSL certificate for ${domain} (acme.sh, standalone HTTP)…"
-    apt_install socat openssl >/dev/null 2>&1 || true
+    # Let's Encrypt's HTTP-01 challenge ALWAYS connects to port 80, so acme.sh
+    # must listen there directly (port 80 must be free for the challenge).
+    if is_port_in_use 80; then
+        err "Port 80 is occupied — the Let's Encrypt HTTP challenge needs it."
+        err "Free port 80 (e.g. stop/reconfigure the web server on it) or use option 2 (custom certificate files) instead."
+        return 1
+    fi
+    apt_install openssl >/dev/null 2>&1 || true
     local acme="$HOME/.acme.sh/acme.sh"
     [[ -f "$acme" ]] || curl -s https://get.acme.sh | sh -s email="admin@${domain}" >/dev/null 2>&1
     local cert_dir="${DATA_DIR}/certs/${domain}"
     mkdir -p "$cert_dir"
-    if ! "$acme" --issue -d "$domain" --standalone --httpport 8090 --server letsencrypt \
+    if ! "$acme" --issue -d "$domain" --standalone --httpport 80 --server letsencrypt \
         --key-file "$cert_dir/key.pem" --fullchain-file "$cert_dir/cert.pem" --force; then
-        err "Certificate issuance failed (is port 8090 reachable from the internet and DNS pointing here?)."
+        err "Certificate issuance failed."
+        err "Checklist: DNS A record -> this server's IP, and port 80 open in the firewall/security group (the challenge always hits port 80, not the panel port)."
         return 1
     fi
     write_ssl_env "$cert_dir/cert.pem" "$cert_dir/key.pem" public
     (crontab -l 2>/dev/null | grep -v "$acme.*-d ${domain} "; \
-     echo "0 3 * * * $acme --issue -d ${domain} --standalone --httpport 8090 --server letsencrypt --key-file ${cert_dir}/key.pem --fullchain-file ${cert_dir}/cert.pem --force && systemctl restart ${SERVICE_NAME}") | crontab -
+     echo "0 3 * * * $acme --issue -d ${domain} --standalone --httpport 80 --server letsencrypt --key-file ${cert_dir}/key.pem --fullchain-file ${cert_dir}/cert.pem --force && systemctl restart ${SERVICE_NAME}") | crontab -
     msg "Renewal cron added (03:00 daily check)."
 }
 
@@ -563,7 +571,7 @@ Commands:
   install     Install DR-VPN. Interactive wizard when run from a terminal
               (port, database, SSL/domain). Flags override prompts:
               --database sqlite|postgresql|mysql, --db-url URL, --port N,
-              --ssl-domain DOMAIN, --no-ssl, --version X.Y.Z, --yes (silent)
+              --ssl-domain DOMAIN (port 80 needed), --no-ssl, --version X.Y.Z, --yes (silent)
   update      Update to the latest version (backs up first)
   uninstall   Remove the service (add --purge to also delete files)
   ssl         Add/replace/remove the SSL certificate on an existing install

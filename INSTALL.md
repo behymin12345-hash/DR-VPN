@@ -9,7 +9,7 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/behymin12345-hash/D
 The installer runs a short interactive wizard (panel port, database,
 SSL/domain) and handles everything: dependencies, uv + Python 3.14, the
 prebuilt dashboard, migrations, the `drvpn` systemd service and a one-time
-setup key. Options pre-answer the wizard: `--port N`, `--ssl-domain DOMAIN`,
+setup key. Options pre-answer the wizard: `--port N`, `--ssl-domain DOMAIN` (needs port 80),
 `--no-ssl`, `--database sqlite|postgresql|mysql`, `--db-url URL`,
 `--version X.Y.Z`, `--yes` (silent). To add a domain to an existing install:
 `sudo drvpn ssl`. After installation use `drvpn status`, `drvpn backup`,

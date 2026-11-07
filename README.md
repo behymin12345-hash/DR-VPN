@@ -98,7 +98,7 @@ drvpn help            # all commands
 ```
 
 Install options (they pre-answer the wizard): `--port 8000`,
-`--ssl-domain example.com`, `--no-ssl`, `--database sqlite|postgresql|mysql`,
+`--ssl-domain example.com` (needs port 80), `--no-ssl`, `--database sqlite|postgresql|mysql`,
 `--db-url URL`, `--version X.Y.Z`, `--yes` (fully silent for automation).
 Without SSL the panel binds to localhost only (security default) — add a
 domain with `drvpn ssl` or use an SSH tunnel for first access.
