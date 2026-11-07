@@ -1,10 +1,15 @@
 import logging
+import os
 from time import perf_counter
 
 from h11 import LocalProtocolError
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.utils.performance import request_phases, start_request_phases
+
+# Phase tracking costs a perf_counter per response phase plus a second log
+# line per request; keep it opt-in for debugging via LOG_REQUEST_PHASES=true.
+_LOG_PHASES = os.getenv("LOG_REQUEST_PHASES", "").strip().lower() in ("1", "true", "yes")
 
 
 class RequestProcessTimeLoggingMiddleware:
@@ -18,7 +23,8 @@ class RequestProcessTimeLoggingMiddleware:
             return
 
         start_time = perf_counter()
-        start_request_phases()
+        if _LOG_PHASES:
+            start_request_phases()
         status_code = 500
         connection_closed = False
 
@@ -65,5 +71,5 @@ class RequestProcessTimeLoggingMiddleware:
                 extra={"process_time": f"{process_time_ms:.2f}ms"},
             )
             phases = request_phases()
-            if phases:
+            if _LOG_PHASES and phases:
                 self.access_logger.info("request phases: %s", phases)

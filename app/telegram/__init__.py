@@ -1,54 +1,59 @@
 import asyncio
 import hashlib
 from asyncio import Lock
-
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
-from nats.js.kv import KeyValue
+from typing import TYPE_CHECKING
 
 from app import on_shutdown, on_startup
 from app.models.settings import RunMethod, Telegram
 from app.nats import is_nats_enabled
-from app.nats.client import setup_nats_kv
 from app.settings import telegram_settings
 from app.utils.logger import get_logger
 from config import nats_settings
 
-from .fsm_storage import NatsFSMStorage
-from .handlers import include_routers
-from .middlewares import setup_middlewares
-from .session import NativeTLSAiohttpSession
+if TYPE_CHECKING:
+    from aiogram import Bot, Dispatcher
+    from nats.js.kv import KeyValue
 
 logger = get_logger("telegram-bot")
 
 
 class TelegramBotManager:
     def __init__(self):
-        self._bot: Bot | None = None
+        self._bot: "Bot | None" = None
         self._polling_task: asyncio.Task | None = None
         self._lock = Lock()
-        self._dp = self._create_dispatcher()
+        self._dp: "Dispatcher | None" = None
         self._handlers_registered = False
         self._shutdown_in_progress = False
         self._stop_requested = False
         self._settings_key: tuple | None = None
-        self._kv: KeyValue | None = None
+        self._kv: "KeyValue | None" = None
         self._nats_conn = None
 
-    @staticmethod
-    def _create_dispatcher() -> Dispatcher:
+    @property
+    def dp(self) -> "Dispatcher":
+        """Dispatcher is created lazily so deployments with the bot disabled
+        never pay the aiogram import/instance cost."""
+        if self._dp is None:
+            self._dp = self._create_dispatcher()
+        return self._dp
+
+    def _create_dispatcher(self) -> "Dispatcher":
+        from aiogram import Dispatcher
+        from aiogram.fsm.storage.memory import MemoryStorage
+
         if is_nats_enabled():
+            from .fsm_storage import NatsFSMStorage
+
             storage = NatsFSMStorage(nats_settings.telegram_kv_bucket)
             return Dispatcher(storage=storage, events_isolation=storage.create_isolation())
         return Dispatcher(storage=MemoryStorage())
 
-    def get_bot(self) -> Bot | None:
+    def get_bot(self) -> "Bot | None":
         return self._bot
 
-    def get_dispatcher(self) -> Dispatcher:
-        return self._dp
+    def get_dispatcher(self) -> "Dispatcher":
+        return self.dp
 
     @staticmethod
     def _settings_key_from_model(settings: Telegram | None) -> tuple | None:
@@ -78,6 +83,8 @@ class TelegramBotManager:
             return True
 
         try:
+            from app.nats.client import setup_nats_kv
+
             # Set up KV connection if not already done
             if not self._kv:
                 self._nats_conn, _js, self._kv = await setup_nats_kv(nats_settings.telegram_kv_bucket)
@@ -139,10 +146,11 @@ class TelegramBotManager:
         async with self._lock:
             self._stop_requested = True
             await self._shutdown_locked()
-            try:
-                await self._dp.fsm.close()
-            except Exception:
-                pass
+            if self._dp is not None:
+                try:
+                    await self._dp.fsm.close()
+                except Exception:
+                    pass
             # Close NATS KV connection if one was opened
             if self._nats_conn:
                 try:
@@ -157,7 +165,7 @@ class TelegramBotManager:
         logger.info("Starting long polling")
         while True:
             try:
-                await self._dp.start_polling(self._bot, handle_signals=False)
+                await self.dp.start_polling(self._bot, handle_signals=False)
                 logger.info("Long polling stopped")
                 return
 
@@ -171,6 +179,16 @@ class TelegramBotManager:
             await asyncio.sleep(retry_period)
 
     async def _start_locked(self, settings: Telegram, is_initiator: bool = False):
+        # aiogram is imported lazily: deployments with the bot disabled never
+        # load it into memory.
+        from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
+        from aiogram.enums import ParseMode
+
+        from .handlers import include_routers
+        from .middlewares import setup_middlewares
+        from .session import NativeTLSAiohttpSession
+
         if settings.method == RunMethod.LONGPOLLING and is_nats_enabled():
             logger.warning(
                 "Long polling is not supported in multi-worker mode, skipping bot start. "
@@ -185,9 +203,9 @@ class TelegramBotManager:
         if not self._handlers_registered:
             try:
                 # register handlers
-                include_routers(self._dp)
+                include_routers(self.dp)
                 # register middlewares
-                setup_middlewares(self._dp)
+                setup_middlewares(self.dp)
                 self._handlers_registered = True
             except RuntimeError:
                 pass
@@ -217,9 +235,9 @@ class TelegramBotManager:
             return
         self._shutdown_in_progress = True
         try:
-            if isinstance(self._bot, Bot):
+            if self._bot is not None:
                 logger.info("Shutting down telegram bot")
-                if self._polling_task is not None:
+                if self._polling_task is not None and self._dp is not None:
                     logger.info("Stopping long polling")
                     try:
                         # Force stop the dispatcher first

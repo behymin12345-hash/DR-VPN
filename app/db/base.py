@@ -55,6 +55,10 @@ if database_settings.is_sqlite:
     def _set_sqlite_pragmas(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
+        # WAL + NORMAL is the durable-enough pairing recommended by SQLite:
+        # transactions survive app crashes, only power loss may lose the last
+        # commits — a good trade for not fsync-ing on every panel write.
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA busy_timeout=5000")
         cursor.close()
 

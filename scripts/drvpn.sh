@@ -137,7 +137,7 @@ install_command() {
     require_root
     detect_os
 
-    local db="sqlite" db_url="" ssl_domain="" ssl_mode="" port="8000" version="main" no_confirm="false"
+    local db="sqlite" db_url="" ssl_domain="" ssl_mode="" port="8000" version="main" no_confirm="false" profile=""
     local PORT_SET="false" DB_SET="false" SSL_SET="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -146,11 +146,17 @@ install_command() {
             --port)     port="$2"; PORT_SET="true"; shift 2 ;;
             --ssl-domain) ssl_domain="$2"; SSL_SET="true"; shift 2 ;;
             --no-ssl)   ssl_mode="skip"; SSL_SET="true"; shift ;;
+            --profile)  profile="$2"; shift 2 ;;
             --version)  version="v${2#v}"; shift 2 ;;
             --yes|-y)   no_confirm="true"; shift ;;
             *) err "Unknown install option: $1"; exit 1 ;;
         esac
     done
+    case "$profile" in
+        ""|standard) ;;
+        minimal) ;;
+        *) err "Unknown --profile '$profile' (use minimal or standard)."; exit 1 ;;
+    esac
 
     # ---------------- interactive wizard (PasarGuard-style) ----------------
     # Prompts run when the installer is attached to a terminal and the
@@ -280,6 +286,26 @@ install_command() {
     mkdir -p "$DATA_DIR" "$BACKUP_DIR"
     sed -i 's|^\(# \)\?SQLALCHEMY_DATABASE_URL.*|# SQLALCHEMY_DATABASE_URL (active value appended below)|' "$APP_DIR/.env"
     echo "SQLALCHEMY_DATABASE_URL = \"${active_db_url}\"" >> "$APP_DIR/.env"
+
+    # --- resource profile (slower background cycles for tiny VPS boxes)
+    if [[ "$profile" == "minimal" ]]; then
+        msg "Applying 'minimal' resource profile (slower background job cycles)…"
+        cat >> "$APP_DIR/.env" <<PROFILE
+
+# --- DR-VPN minimal resource profile ---
+# Slower background job cycles for small-VPS deployments (256-512 MB RAM).
+# Statistics and notifications update less frequently; nothing is lost.
+JOB_RECORD_USER_USAGES_INTERVAL = 60
+JOB_RECORD_NODE_USAGES_INTERVAL = 120
+JOB_CORE_HEALTH_CHECK_INTERVAL = 60
+JOB_REVIEW_USERS_INTERVAL = 120
+JOB_REVIEW_ADMIN_LIMITS_INTERVAL = 60
+JOB_SEND_NOTIFICATIONS_INTERVAL = 120
+JOB_GATHER_NODES_STATS_INTERVAL = 3600
+JOB_CHECK_NODE_LIMITS_INTERVAL = 120
+LOG_REQUEST_PHASES = false
+PROFILE
+    fi
 
     # --- migrations
     msg "Running database migrations…"
@@ -517,6 +543,129 @@ node_status_command()  { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" status || dock
 node_logs_command()    { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" logs "$@" || docker logs -f "$(docker ps -q --filter name=node | head -1)"; }
 node_restart_command() { bash "$NODE_CLI" restart; }
 
+# ----------------------------- mtproto (telegram proxy) ---------------------
+
+MTPROTO_APP_DIR="/opt/dr-mtproto"
+MTPROTO_CONFIG="$MTPROTO_APP_DIR/config.toml"
+MTPROTO_SERVICE="drvpn-mtproto"
+MTPROTO_BIN="/usr/local/bin/mtg"
+
+install_mtproto_command() {
+    require_root
+    if [[ -x "$MTPROTO_BIN" ]] && service_unit_exists "$MTPROTO_SERVICE"; then
+        err "MTProto proxy is already installed — edit $MTPROTO_CONFIG and restart, or uninstall first."
+        exit 1
+    fi
+    local port="443" domain="" PORT_SET_MTPROTO="false"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --port) port="$2"; PORT_SET_MTPROTO="true"; shift 2 ;;
+            --cloak-domain) domain="$2"; shift 2 ;;
+            *) err "Unknown option: $1"; exit 1 ;;
+        esac
+    done
+    if [[ -t 0 ]]; then
+        if [[ "$PORT_SET_MTPROTO" != "true" ]]; then
+            read -rp "MTProto proxy port [443]: " mport
+            port="${mport:-443}"
+        fi
+        if [[ -z "$domain" ]]; then
+            read -rp "Fake-TLS cloaking domain (optional, hides the proxy behind a real site, Enter to skip): " mdomain
+            domain="$mdomain"
+        fi
+    fi
+    while is_port_in_use "$port"; do
+        if [[ -t 0 ]]; then
+            warn "Port ${port} is already in use."
+            read -rp "Enter another port: " port
+        else
+            err "Port ${port} is already in use — pass a free port with --port."
+            exit 1
+        fi
+    done
+
+    msg "Installing mtg (lightweight Telegram MTProto proxy, single Go binary)…"
+    apt_install curl >/dev/null 2>&1 || true
+    local asset url tmpdir
+    asset="$(curl -fsSL https://api.github.com/repos/9seconds/mtg/releases/latest | grep -oE '"browser_download_url": *"[^"]*linux-amd64\.tar\.gz"' | head -1 | cut -d'"' -f4)"
+    [[ -n "$asset" ]] || { err "Could not resolve the latest mtg release asset."; exit 1; }
+    tmpdir="$(mktemp -d)"
+    curl -fsSL -o "$tmpdir/mtg.tar.gz" "$asset" && tar -xzf "$tmpdir/mtg.tar.gz" -C "$tmpdir"
+    install -m 0755 "$(find "$tmpdir" -type f -name mtg | head -1)" "$MTPROTO_BIN"
+    rm -rf "$tmpdir"
+
+    mkdir -p "$MTPROTO_APP_DIR"
+    local secret=""
+    if [[ -n "$domain" ]]; then
+        secret="$("$MTPROTO_BIN" generate-secret -c "$domain" 2>/dev/null || true)"
+    fi
+    [[ -n "$secret" ]] || secret="$("$MTPROTO_BIN" generate-secret)"
+    [[ -n "$secret" ]] || { err "Could not generate the MTProto secret."; exit 1; }
+    cat > "$MTPROTO_CONFIG" <<TOML
+secret = "$secret"
+bind-to = "0.0.0.0:${port}"
+TOML
+    chmod 600 "$MTPROTO_CONFIG"
+
+    cat > "/etc/systemd/system/${MTPROTO_SERVICE}.service" <<UNIT
+[Unit]
+Description=DR-VPN MTProto proxy (Telegram)
+After=network.target
+
+[Service]
+ExecStart=${MTPROTO_BIN} run ${MTPROTO_CONFIG}
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload
+    systemctl enable --now "$MTPROTO_SERVICE" >/dev/null 2>&1
+
+    local ip
+    ip="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo '<SERVER_IP>')"
+    echo
+    echo -e "${BOLD}${GREEN}=============================================="
+    echo -e " MTProto proxy installed!"
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e " Port:        ${port}"
+    echo -e " Secret:      ${YELLOW}${secret}${NC}"
+    echo -e " Config:      ${MTPROTO_CONFIG}"
+    echo -e " Telegram links (share with users):"
+    echo -e "   ${CYAN}tg://proxy?server=${ip}&port=${port}&secret=${secret}${NC}"
+    echo -e "   ${CYAN}https://t.me/proxy?server=${ip}&port=${port}&secret=${secret}${NC}"
+    echo -e " Replace the IP with your domain in the links if you prefer."
+    echo -e " Manage:      ${GREEN}drvpn mtproto-status | mtproto-logs | mtproto-restart${NC}"
+    echo -e "${BOLD}${GREEN}==============================================${NC}"
+}
+
+service_unit_exists() {
+    systemctl list-unit-files "$1.service" --no-legend 2>/dev/null | grep -q "^$1\.service"
+}
+
+uninstall_mtproto_command() {
+    require_root
+    systemctl disable --now "$MTPROTO_SERVICE" 2>/dev/null || true
+    rm -f "/etc/systemd/system/${MTPROTO_SERVICE}.service" "$MTPROTO_BIN"
+    systemctl daemon-reload
+    if [[ -t 0 ]]; then
+        read -rp "Delete the MTProto config and secret? [y/N]: " reply
+        [[ "$reply" =~ ^[Yy]$ ]] && rm -rf "$MTPROTO_APP_DIR"
+    else
+        rm -rf "$MTPROTO_APP_DIR"
+    fi
+    msg "MTProto proxy removed."
+}
+
+mtproto_status_command()  { systemctl --no-pager status "$MTPROTO_SERVICE"; }
+mtproto_logs_command()    { journalctl -u "$MTPROTO_SERVICE" "$@"; }
+mtproto_restart_command() { require_root; systemctl restart "$MTPROTO_SERVICE"; msg "MTProto proxy restarted."; }
+edit_mtproto_command()    { "${EDITOR:-nano}" "$MTPROTO_CONFIG"; systemctl restart "$MTPROTO_SERVICE"; msg "Config applied."; }
+
 # ----------------------------- update ---------------------------------------
 
 update_command() {
@@ -642,6 +791,9 @@ Commands:
   install-node   Install a node runtime on THIS server (Docker, upstream node)
   edit-env-dr    Open the node's .env (SERVICE_PORT / API_KEY / protocol)
   node-status | node-logs | node-restart | uninstall-node
+  install-mtproto   Install a Telegram MTProto proxy (mtg, --port/--cloak-domain)
+  edit-mtproto   Edit the MTProto config (secret/port)
+  mtproto-status | mtproto-logs | mtproto-restart | uninstall-mtproto
   status      Show service status and health check
   logs [args] Follow/view service logs (journalctl passthrough)
   start|stop|restart   Manage the systemd service
@@ -680,6 +832,12 @@ main() {
         node-restart)  node_restart_command ;;
         edit-env-dr)   edit_node_env_command ;;
         edit-node-env) edit_node_env_command ;;
+        install-mtproto)  install_mtproto_command "$@" ;;
+        uninstall-mtproto) uninstall_mtproto_command ;;
+        mtproto-status)   mtproto_status_command ;;
+        mtproto-logs)     mtproto_logs_command "$@" ;;
+        mtproto-restart)  mtproto_restart_command ;;
+        edit-mtproto)     edit_mtproto_command ;;
         edit-env) edit_env_command ;;
         version)  version_command ;;
         help|-h|--help) usage ;;
