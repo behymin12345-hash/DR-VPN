@@ -15,7 +15,6 @@ import { Progress } from '@/components/ui/progress'
 import { removeAuthToken } from '@/utils/authStorage'
 import { queryClient } from '@/utils/query-client'
 import { ThemeToggle } from '@/components/common/theme-toggle'
-import { Language } from '@/components/common/language'
 import { isOwner, roleLabel } from '@/utils/rbac'
 import { statusColors } from '@/constants/UserSettings'
 import { cn } from '@/lib/utils'
@@ -148,10 +147,9 @@ export function NavUser({
                   </div>
                 )}
 
-                {/* Theme and Language Controls */}
+                {/* Theme Controls */}
                 <div className="flex gap-1 border-t pt-2">
                   <ThemeToggle />
-                  <Language />
                 </div>
 
                 {admin?.id != null && <SelfPasskeyDialog admin={admin} compact />}

@@ -1,17 +1,19 @@
 import i18n from 'i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
 import HttpApi from 'i18next-http-backend'
 import { initReactI18next } from 'react-i18next'
 import { joinURL } from 'ufo'
 
+// DR-VPN ships an English-only dashboard (no language switcher, no detection):
+// the UI is pinned to 'en' regardless of the browser's locale.
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .use(HttpApi)
   .init(
     {
       debug: import.meta.env.NODE_ENV === 'development',
       returnNull: false,
+      lng: 'en',
+      supportedLngs: ['en'],
       fallbackLng: 'en',
       interpolation: {
         escapeValue: false,
@@ -20,9 +22,6 @@ i18n
         useSuspense: true,
       },
       load: 'languageOnly',
-      detection: {
-        caches: ['localStorage'],
-      },
       backend: {
         loadPath: joinURL(import.meta.env.BASE_URL, `statics/locales/{{lng}}.json`),
       },

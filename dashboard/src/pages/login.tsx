@@ -1,5 +1,4 @@
 import { Footer } from '@/components/layout/footer'
-import { Language } from '@/components/common/language'
 import { useTheme } from '@/app/providers/theme-provider'
 import { ThemeToggle } from '@/components/common/theme-toggle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -407,8 +406,7 @@ export const Login: FC = () => {
   return (
     <div className="flex min-h-screen w-full flex-col justify-between px-6 pb-10 pt-6">
       <div className="w-full">
-        <div className="flex w-full items-center justify-between">
-          <Language />
+        <div className="flex w-full items-center justify-end">
           <ThemeToggle />
         </div>
         <div className="flex w-full items-center justify-center">

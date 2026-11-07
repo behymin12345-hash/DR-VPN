@@ -1,4 +1,3 @@
-import { Language } from '@/components/common/language'
 import Snowfall from '@/components/common/snowfall'
 import { useTheme } from '@/app/providers/theme-provider'
 import { ThemeToggle } from '@/components/common/theme-toggle'
@@ -551,7 +550,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {state !== 'collapsed' && <GithubStar />}
             {state !== 'collapsed' && (
               <div className="flex items-start gap-2">
-                <Language />
                 <ThemeToggle />
               </div>
             )}
@@ -560,7 +558,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <GithubStar />
 
                 <div className="flex items-start gap-2">
-                  <Language />
                   <ThemeToggle />
                 </div>
               </>
