@@ -69,7 +69,7 @@ apt_install() {
 is_port_in_use() {
     local port="$1"
     if command -v ss >/dev/null 2>&1; then
-        ss -tln 2>/dev/null | awk '{print $4}' | grep -qE ":${port}$"
+        ss -tlnH 2>/dev/null | awk '{print $4}' | grep -E ":${port}$" >/dev/null
     else
         return 1
     fi
@@ -79,7 +79,13 @@ rand_password() {  # 20-char alphanumeric
     tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20
 }
 
-service_exists() { systemctl list-unit-files 2>/dev/null | grep -q "^${SERVICE_NAME}\.service"; }
+service_exists() {
+    # Query only our unit: a bare 'list-unit-files | grep -q' makes grep exit
+    # early and SIGPIPE-kill systemctl, which pipefail turns into a false
+    # negative on hosts with many unit files (deterministically broke
+    # service_exists on a snap-heavy Ubuntu box).
+    systemctl list-unit-files "$SERVICE_NAME.service" --no-legend 2>/dev/null | grep -q "^${SERVICE_NAME}\.service"
+}
 
 service_running() { systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; }
 
