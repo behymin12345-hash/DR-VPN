@@ -1,7 +1,7 @@
 [project]
-name = "PasarGuard"
-version = "5.6.0"
-description = "Unified GUI Censorship Resistant Solution"
+name = "dr-vpn"
+version = "0.1.0"
+description = "DR-VPN — lightweight proxy management panel (based on PasarGuard)"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

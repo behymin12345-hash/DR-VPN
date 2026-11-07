@@ -84,10 +84,10 @@ check-migrations:
 run:
 	@uv run main.py
 
-# run pasarguard-cli
+# run drvpn-cli
 .PHONY: run-cli
 run-cli:
-	@uv run pasarguard-cli.py
+	@uv run drvpn-cli.py
 
 # Run tests
 .PHONY: test test-serial

@@ -1,243 +1,145 @@
 <p align="center">
-  <a href="https://github.com/PasarGuard/panel" target="_blank" rel="noopener noreferrer">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/PasarGuard/PasarGuard.github.io/raw/main/public/logos/PasarGuard-white-logo.png">
-      <img width="160" height="160" src="https://github.com/PasarGuard/PasarGuard.github.io/raw/main/public/logos/PasarGuard-black-logo.png">
-    </picture>
+  <a href="#" target="_blank" rel="noopener noreferrer">
+    <img width="160" height="160" src="assets/branding/logo.png" alt="لوگوی DR-VPN">
   </a>
 </p>
 
-<h1 align="center">🛡️ پاسارگارد</h1>
+<h1 align="center">⚡ DR-VPN</h1>
 
 <p align="center">
-    <strong>راه‌حل یکپارچه و مقاوم در برابر سانسور برای مدیریت پروکسی</strong>
+    <strong>پنل مدیریت پروکسی سبک و مستقل</strong>
+</p>
+
+<p align="center">
+  <a href="./README.md">🇬🇧 English</a>
 </p>
 
 ---
 
-<br/>
-<p align="center">
-    <a href="#">
-        <img src="https://img.shields.io/github/actions/workflow/status/PasarGuard/panel/build.yml?style=flat-square" />
-    </a>
-    <a href="https://hub.docker.com/r/PasarGuard/panel" target="_blank">
-        <img src="https://img.shields.io/docker/pulls/PasarGuard/panel?style=flat-square&logo=docker" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/github/license/PasarGuard/panel?style=flat-square" />
-    </a>
-    <a href="https://t.me/Pasar_Guard" target="_blank">
-        <img src="https://img.shields.io/badge/telegram-group-blue?style=flat-square&logo=telegram" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/badge/twitter-commiunity-blue?style=flat-square&logo=twitter" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/github/stars/PasarGuard/panel?style=social" />
-    </a>
-</p>
+> [!WARNING]
+> **DR-VPN در نسخه اولیه (v0.1.0) و در حال توسعه فعال است.** این یک نرم‌افزار واقعی
+> و اجرایی است (مجموعه تست پاس می‌شود و پنل بالا می‌آید)، اما نصب‌کننده اختصاصی،
+> ماژول نمایندگی (اسپانسری) و گزارش‌های بنچمارک هنوز در نقشه راه هستند.
+> وضعیت دقیق را در [نقشه راه](#️-نقشه-راه) ببینید.
 
-<p align="center">
- <a href="./README.md">
- 🇺🇸 English
- </a>
- /
- <a href="./README-fa.md">
- 🇮🇷 فارسی
- </a>
-  /
-  <a href="./README-zh-cn.md">
- 🇨🇳 简体中文
- </a>
-   /
-  <a href="./README-ru.md">
- 🇷🇺 Русский
- </a>
-</p>
+## 📖 DR-VPN چیست؟
 
-<p align="center">
-  <a href="https://github.com/PasarGuard/panel" target="_blank" rel="noopener noreferrer" >
-    <img src="https://github.com/PasarGuard/PasarGuard.github.io/raw/main/public/logos/screenshot.png" alt="پاسارگارد اسکرین‌شات" width="600" height="auto">
-  </a>
-</p>
+DR-VPN یک پنل مدیریت پروکسی سبک و self-host است برای اجرا و مدیریت صدها اکانت
+پروکسی از طریق یک داشبورد وب تمیز، یک REST API کامل و خط فرمان. این پنل
+کانفیگ‌های [Xray-core](https://github.com/XTLS/Xray-core) را مدیریت می‌کند و با
+Node های راه‌دور Xray کار می‌کند.
 
-## 📋 فهرست مطالب
+DR-VPN یک فورک از [PasarGuard](https://github.com/PasarGuard/panel) (AGPL-3.0)
+است که خود آن هم برگرفته از [Marzban](https://github.com/Gozargah/Marzban) می‌باشد.
+اهداف DR-VPN: هویت بصری کاملاً مستقل، سیستم نمایندگی (اسپانسری)، تجربه کاربری
+درجه‌یک فارسی/انگلیسی، و کاهش مصرف منابع روی سرورهای کوچک. تمام اعتبار کد پایه
+متعلق به پروژه‌های upstream است — جزئیات در [NOTICE.md](NOTICE.md).
 
-> **ناوبری سریع** - به هر بخش زیر پرش کنید
+## ✨ امکانات
 
--   [📖 بررسی اجمالی](#-بررسی-اجمالی)
-    -   [🤔 چرا از پاسارگارد استفاده کنیم؟](#-چرا-از-پاسارگارد-استفاده-کنیم)
-        -   [✨ ویژگی‌ها](#-ویژگیها)
--   [🚀 راهنمای نصب](#-راهنمای-نصب)
--   [📚 مستندات](#-مستندات)
--   [💖 حمایت مالی](#-حمایت-مالی)
-
----
-
-# 📖 بررسی اجمالی
-
-> **پاسارگارد چیست؟**
-
-پاسارگارد یک ابزار قدرتمند مدیریت پروکسی است که رابط کاربری بصری و کارآمدی برای مدیریت صدها حساب پروکسی ارائه می‌دهد. این ابزار با Python و React.js ساخته شده و عملکرد، مقیاس‌پذیری و سهولت استفاده را برای ساده‌سازی مدیریت پروکسی در مقیاس بزرگ ترکیب می‌کند. این ابزار هم از [Xray-core](https://github.com/XTLS/Xray-core) و هم از [WireGuard](https://www.wireguard.com/) برای حداکثر عملکرد پشتیبانی می‌کند.
-
----
-
-## 🤔 چرا از پاسارگارد استفاده کنیم؟
-
-> **ساده، قدرتمند، قابل اعتماد**
-
-پاسارگارد یک ابزار مدیریت پروکسی کاربرپسند، غنی از ویژگی و قابل اعتماد است. این ابزار به شما امکان ایجاد و مدیریت چندین پروکسی برای کاربران بدون نیاز به پیکربندی پیچیده را می‌دهد. با رابط کاربری وب داخلی آن، می‌توانید به راحتی فعالیت‌ها را نظارت کنید، تنظیمات را تغییر دهید و محدودیت‌های دسترسی کاربران را کنترل کنید — همه از یک داشبورد مناسب.
-
----
-
-### ✨ ویژگی‌ها
-
-<div align="right">
-
-**🌐 رابط کاربری وب و API**
-- داشبورد **Web UI** داخلی
-- بک‌اند کاملاً **REST API**
-- پشتیبانی از **Multi-Node** برای توزیع زیرساخت
+**🌐 رابط وب و API**
+- داشبورد **وب UI** (React) با تم تاریک/روشن
+- بک‌اند **REST API** کامل (با OpenAPI schema)
+- پشتیبانی **Multi-Node** برای توزیع زیرساخت
 
 **🔐 پروتکل‌ها و امنیت**
 - پشتیبانی از **Vmess**، **VLESS**، **Trojan**، **Shadowsocks**، **WireGuard** و **Hysteria2**
-- پشتیبانی از **TLS** و **REALITY**
+- پشتیبانی **TLS** و **REALITY**
 - **چند پروتکل** برای یک کاربر
 
 **👥 مدیریت کاربران**
-- **چند کاربر** روی یک inbound
-- **چند inbound** روی **یک پورت** (پشتیبانی از fallbacks)
-- محدودیت‌های **ترافیک** و **تاریخ انقضا**
-- محدودیت ترافیک **دوره‌ای** (روزانه، هفتگی و غیره)
-- محدودیت **HWID/دستگاه** برای کنترل دسترسی مبتنی بر سخت‌افزار
+- **چند کاربر** روی یک اینباند و **چند اینباند** روی یک پورت (با fallback)
+- محدودیت **ترافیک** و **تاریخ انقضا**، محدودیت دوره‌ای (روزانه، هفتگی و ...)
+- محدودیت **HWID/دستگاه**
+- **چند ادمین** با **RBAC** (مجوزهای اسکوپ‌دار و مالکیت کاربر برای هر ادمین)
 
-**🔗 اشتراک‌ها و اشتراک‌گذاری**
-- **لینک اشتراک** سازگار با **V2ray**، **Clash** و **ClashMeta**
-- تولیدکننده خودکار **لینک اشتراک** و **QRcode**
-- نظارت بر سیستم و **آمار ترافیک**
+**🔗 اشتراک و اشتراک‌گذاری**
+- لینک اشتراک سازگار با **V2ray**، **Clash**، **ClashMeta**، **sing-box** و بیشتر
+- تولید خودکار **لینک اشتراک‌گذاری** و **QR کد**
+- آمار ترافیک و مانیتورینگ
 
-**🛠️ ابزارها و سفارشی‌سازی**
-- پیکربندی قابل تنظیم xray
-- **ربات تلگرام** یکپارچه
-- **رابط خط فرمان (CLI)**
-- پشتیبانی از **چند زبان**
-- پشتیبانی از **چند ادمین** با **RBAC** برای دسترسی‌های دقیق و محدوده‌بندی‌شده
+**🛠️ ابزارها و شخصی‌سازی**
+- کانفیگ Xray قابل‌سفارشی‌سازی با اعتبارسنجی
+- **ربات تلگرام** یکپارچه (اختیاری)
+- **CLI** برای کلیدهای نصب و مدیریت
+- رابط **چندزبانه** (English / فارسی / Русский / 中文) با پشتیبانی کامل RTL
 
-</div>
+## 🚀 نصب (دستی، نسخه v0.1.0)
 
----
+> نصب‌کننده یک‌فرمانی در نقشه راه است. فعلاً نصب دستی است.
 
-# 🚀 راهنمای نصب
+پیش‌نیاز: لینوکس x86_64 (اوبونتو ۲۰.۰۴/۲۲.۰۴/۲۴.۰۴ توصیه می‌شود) یا ویندوز برای توسعه،
+به‌علاوه [uv](https://docs.astral.sh/uv/).
 
-> **شروع سریع** - پاسارگارد را در چند دقیقه راه‌اندازی کنید
-
-### برای راه‌اندازی سریع، از دستورات زیر بر اساس دیتابیس مورد نظرتان استفاده کنید.
-
----
-
-**TimescaleDB (توصیه شده):**
 ```bash
-sudo bash -c "$(curl -fsSL https://github.com/PasarGuard/scripts/raw/main/pasarguard.sh)" @ install --database timescaledb
+# ۱. دریافت کد
+git clone https://github.com/<OWNER>/DR-VPN.git
+cd DR-VPN
+
+# ۲. نصب Python 3.14 + وابستگی‌ها (uv همه‌چیز را مدیریت می‌کند)
+uv sync
+
+# ۳. پیکربندی
+cp .env.example .env   # سپس تنظیمات را ویرایش کنید
+
+# ۴. اجرای پنل
+uv run python main.py
+
+# ۵. در ترمینال دیگر، یک کلید نصب یک‌بارمصرف برای اکانت owner بسازید
+uv run python drvpn-cli.py generate-temp-key
 ```
 
-**SQLite:**
-```bash
-sudo bash -c "$(curl -fsSL https://github.com/PasarGuard/scripts/raw/main/pasarguard.sh)" @ install
-```
-
-**MySQL:**
-```bash
-sudo bash -c "$(curl -fsSL https://github.com/PasarGuard/scripts/raw/main/pasarguard.sh)" @ install --database mysql
-```
-
-**MariaDB:**
-```bash
-sudo bash -c "$(curl -fsSL https://github.com/PasarGuard/scripts/raw/main/pasarguard.sh)" @ install --database mariadb
-```
-
-**PostgreSQL:**
-```bash
-sudo bash -c "$(curl -fsSL https://github.com/PasarGuard/scripts/raw/main/pasarguard.sh)" @ install --database postgresql
-```
-
-### 📋 پس از نصب:
-
-<div align="right">
-
-**📋 لاگ‌ها را مشاهده کنید** (برای توقف `Ctrl+C` را فشار دهید)
-
-**📁 فایل‌ها در مسیر** `/opt/pasarguard` قرار دارند
-
-**⚙️ فایل پیکربندی:** `/opt/pasarguard/.env` (برای جزئیات [پیکربندی](#-پیکربندی) را ببینید)
-
-**💾 فایل‌های داده:** `/var/lib/pasarguard`
-
-**🔒 مهم:** داشبورد برای امنیت نیاز به گواهی SSL دارد
-- دریافت گواهی SSL: [راهنما](https://PasarGuard.github.io/PasarGuard/fa/examples/issue-ssl-certificate)
-- دسترسی: `https://YOUR_DOMAIN:8000/dashboard/`
-
-**🔗 برای تست بدون دامنه:** از SSH port forwarding استفاده کنید (پایین را ببینید)
-
-</div>
-
----
+سپس داشبورد را باز کنید و با کلید setup، اکانت owner را بسازید. بدون گواهی SSL
+پنل فقط روی localhost سرو می‌شود — برای اولین دسترسی از گواهی SSL یا SSH port
+forwarding استفاده کنید:
 
 ```bash
 ssh -L 8000:localhost:8000 user@serverip
+# سپس http://localhost:8000/dashboard/ را باز کنید
 ```
 
-سپس دسترسی: `http://localhost:8000/dashboard/`
+جزئیات، متغیرهای محیطی و نکات systemd در [INSTALL.md](INSTALL.md).
 
-> ⚠️ **فقط برای تست** - با بستن ترمینال SSH دسترسی خود را از دست خواهید داد.
-
-### 🔧 مراحل بعدی:
+### داکر
 
 ```bash
-# ایجاد کلید موقت یک‌بارمصرف برای راه‌اندازی حساب owner
-pasarguard cli generate-temp-key
-
-# از این کلید در صفحه ورود داشبورد برای ایجاد حساب owner استفاده کنید
-
-# دریافت راهنما
-pasarguard --help
+docker build -t dr-vpn .
+docker run -d --name dr-vpn --network host -v /var/lib/drvpn:/var/lib/drvpn --env-file .env dr-vpn
 ```
 
----
+## 📚 مستندات
 
-# 📚 مستندات
+- مستندات کامل (upstream — با عملکرد فعلی منطبق است): [docs.pasarguard.org](https://docs.pasarguard.org)
+- تحلیل معماری این فورک: [docs/ARCHITECTURE-REPORT.md](docs/ARCHITECTURE-REPORT.md)
 
-<div align="right">
+## 🗺️ نقشه راه
 
-**📖 مستندات رسمی** - راهنماهای کامل در دسترس:
+| مرحله | شرح | وضعیت |
+|---|---|---|
+| ۱ | تحلیل معماری مخزن | ✅ انجام شد |
+| ۲ | برندینگ و هویت DR-VPN | ✅ انجام شد |
+| ۳ | بهینه‌سازی عملکرد، پروفایل‌های منابع، بنچمارک | 🔨 در حال انجام |
+| ۴ | استحکام هسته عملکردی | ⏳ برنامه‌ریزی شده |
+| ۵ | ماژول نمایندگی (اسپانسری) | ⏳ برنامه‌ریزی شده |
+| ۶ | بازطراحی کامل داشبورد + پیش‌فرض فارسی/انگلیسی | ⏳ برنامه‌ریزی شده |
+| ۷ | نصب‌کننده لینوکس (نصب/آپدیت/بکاپ + systemd) | ⏳ برنامه‌ریزی شده |
+| ۸ | امنیت و QA | ⏳ برنامه‌ریزی شده |
+| ۹ | انتشار بالغ عمومی | ⏳ برنامه‌ریزی شده |
 
-🇺🇸 **[English](https://PasarGuard.github.io/PasarGuard)**
+## 📄 مجوز و ارجاع
 
-🇮🇷 **[فارسی](https://PasarGuard.github.io/PasarGuard)**
+DR-VPN تحت مجوز **[GNU AGPL-3.0](LICENSE)** است که از PasarGuard به ارث رسیده.
+پروژه‌های upstream تمام اعتبار کد پایه را دارند:
 
-🇷🇺 **[Русский](https://PasarGuard.github.io/PasarGuard)**
+- [PasarGuard](https://github.com/PasarGuard/panel) — AGPL-3.0، © PasarGuard organization
+- [Marzban](https://github.com/Gozargah/Marzban) — پروژه اصلی Marzban
 
-</div>
-
-> **مشارکت:** در بهبود مستندات در [GitHub](https://github.com/PasarGuard/PasarGuard.github.io) کمک کنید
-
----
-
-# 💖 حمایت مالی
-
-<div align="right">
-
-> **حمایت از توسعه پاسارگارد**
-
-اگر پاسارگارد به شما کمک می‌کند، از توسعه آن حمایت کنید:
-
-[![Donate](https://img.shields.io/badge/Donate-Support%20Us-green?style=for-the-badge)](http://donate.pasarguard.org)
-
-**از حمایت شما متشکریم!** 💖
-
-</div>
+اگر نسخه تغییریافته این نرم‌افزار را به‌عنوان سرویس شبکه اجرا می‌کنید، بند §13
+AGPL-3.0 ایجاب می‌کند سورس متناظر را به کاربران سرویس خود ارائه دهید.
+جزئیات در [NOTICE.md](NOTICE.md).
 
 ---
 
 <p align="center">
-  Made with ❤️ for Internet freedom
+  DR-VPN · یک هویت مستقل برای یک کدبیس آزموده
 </p>

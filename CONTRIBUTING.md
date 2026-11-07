@@ -177,7 +177,7 @@ make fformat
 
 PasarGuard’s CLI is built using [Typer](https://typer.tiangolo.com/).
 
--   CLI codebase: [cli/](file:///home/coder/panel/cli) and the entrypoint script [pasarguard-cli.py](file:///home/coder/panel/pasarguard-cli.py).
+-   CLI codebase: [cli/](cli) and the entrypoint script [drvpn-cli.py](drvpn-cli.py).
 -   To run the CLI in development:
     ```bash
     make run-cli

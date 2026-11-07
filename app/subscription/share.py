@@ -200,7 +200,7 @@ def apply_custom_format_variables(format_variables: dict, custom_variables: list
             continue
         try:
             format_variables[key] = raw_value.format_map(base_variables)
-        except ValueError, KeyError:
+        except (ValueError, KeyError):
             format_variables[key] = raw_value
 
     return format_variables
@@ -213,7 +213,7 @@ def _format_dynamic_value(value, format_variables: dict):
             return value
         try:
             return value.format_map(format_variables)
-        except ValueError, KeyError, AttributeError, IndexError, TypeError:
+        except (ValueError, KeyError, AttributeError, IndexError, TypeError):
             # A value the variables cannot fill (stray brace, {0}, {X.y}) is kept as it is
             return value
     if isinstance(value, list):
