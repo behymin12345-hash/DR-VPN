@@ -481,7 +481,7 @@ install_node_command() {
     msg "Fetching the node installer…"
     curl -fsSL "$NODE_SCRIPT_URL" -o "$NODE_CLI" && chmod +x "$NODE_CLI"
     msg "Starting the node installer — it will ask for API Key, port and certificate:"
-    bash "$NODE_CLI" @ install || true
+    bash "$NODE_CLI" install || true
     echo
     echo -e "${BOLD}${GREEN}=============================================="
     echo -e " Node installed!"
@@ -504,7 +504,7 @@ install_node_command() {
 uninstall_node_command() {
     require_root
     [[ -x "$NODE_CLI" ]] || { err "Node installer not found at $NODE_CLI."; exit 1; }
-    bash "$NODE_CLI" @ uninstall
+    bash "$NODE_CLI" uninstall
 }
 
 edit_node_env_command() {
@@ -513,9 +513,9 @@ edit_node_env_command() {
     msg "Apply changes with: drvpn node-restart"
 }
 
-node_status_command()  { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" @ status || docker ps --filter name=node; }
-node_logs_command()    { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" @ logs "$@" || docker logs -f "$(docker ps -q --filter name=node | head -1)"; }
-node_restart_command() { bash "$NODE_CLI" @ restart; }
+node_status_command()  { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" status || docker ps --filter name=node; }
+node_logs_command()    { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" logs "$@" || docker logs -f "$(docker ps -q --filter name=node | head -1)"; }
+node_restart_command() { bash "$NODE_CLI" restart; }
 
 # ----------------------------- update ---------------------------------------
 
