@@ -15,7 +15,7 @@ and is **not** implemented yet — this document describes the manual path.
 ## 1. Get the code
 
 ```bash
-git clone https://github.com/<OWNER>/DR-VPN.git
+git clone https://github.com/behymin12345-hash/DR-VPN.git
 cd DR-VPN
 ```
 

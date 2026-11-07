@@ -73,7 +73,7 @@ DR-VPN یک فورک از [PasarGuard](https://github.com/PasarGuard/panel) (AGP
 
 ```bash
 # ۱. دریافت کد
-git clone https://github.com/<OWNER>/DR-VPN.git
+git clone https://github.com/behymin12345-hash/DR-VPN.git
 cd DR-VPN
 
 # ۲. نصب Python 3.14 + وابستگی‌ها (uv همه‌چیز را مدیریت می‌کند)

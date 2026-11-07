@@ -18,7 +18,7 @@ interface UseVersionCheckOptions {
   enabled?: boolean
 }
 
-const GITHUB_API_URL = '' // set to the DR-VPN releases API URL when the public repo exists
+const GITHUB_API_URL = 'https://api.github.com/repos/behymin12345-hash/DR-VPN/releases/latest'
 const CACHE_KEY = 'drvpn_release'
 const CACHE_DURATION = 10 * 60 * 1000
 

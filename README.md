@@ -75,7 +75,7 @@ development, plus [uv](https://docs.astral.sh/uv/).
 
 ```bash
 # 1. Get the code
-git clone https://github.com/<OWNER>/DR-VPN.git
+git clone https://github.com/behymin12345-hash/DR-VPN.git
 cd DR-VPN
 
 # 2. Install Python 3.14 + dependencies (uv manages everything)
