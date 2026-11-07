@@ -136,6 +136,18 @@ ssh -L 8000:localhost:8000 user@serverip
 
 جزئیات، متغیرهای محیطی و نکات systemd در [INSTALL.md](INSTALL.md).
 
+### نود
+
+پنل خودش Xray اجرا نمی‌کند — **حداقل یک نود** لازم است (همین سرور یا سرور دیگر). بلافاصله بعد از پنل:
+
+```bash
+sudo drvpn install-node     # نصب رانتایم نود (سوال API Key/پورت می‌پرسد)
+sudo drvpn edit-env-dr      # تنظیمات نود: SERVICE_PORT / API_KEY / پروتکل
+```
+
+بعد در داشبورد: **Nodes → Create Node** (آدرس، پورت `62050`، API Key نود، سرتیفیکیت از `/var/lib/pg-node/certs/ssl_cert.pem`).
+راهنمای کامل با شروع سریع تک‌سروره: [docs/NODE-SETUP.md](docs/NODE-SETUP.md).
+
 ### داکر
 
 ```bash

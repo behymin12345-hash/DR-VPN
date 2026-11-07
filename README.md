@@ -139,6 +139,20 @@ See [INSTALL.md](INSTALL.md) for details, environment variables and systemd note
 
 </details>
 
+### Nodes
+
+The panel does not run Xray itself — **at least one node** is required
+(same server or separate). Install it right after the panel:
+
+```bash
+sudo drvpn install-node     # installs the node runtime (asks API key/port)
+sudo drvpn edit-env-dr      # node settings: SERVICE_PORT / API_KEY / protocol
+```
+
+Then in the dashboard: **Nodes → Create Node** (address, port `62050`,
+API key from the node, certificate from `/var/lib/pg-node/certs/ssl_cert.pem`).
+Full guide with a single-server quick start: [docs/NODE-SETUP.md](docs/NODE-SETUP.md).
+
 ### Docker
 
 ```bash

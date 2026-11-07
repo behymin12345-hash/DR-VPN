@@ -126,7 +126,18 @@ Migrations run automatically? No — run them once after updates:
 uv run alembic upgrade head
 ```
 
-## 7. Docker (optional)
+## 7. Node (required for connections)
+
+The panel alone does not serve users — install a node (same or another server)
+and add it under **Nodes → Create Node**:
+
+```bash
+sudo drvpn install-node
+```
+
+Full guide: [docs/NODE-SETUP.md](docs/NODE-SETUP.md).
+
+## 8. Docker (optional)
 
 ```bash
 # published image (built by CI from the v0.1.0 tag)
