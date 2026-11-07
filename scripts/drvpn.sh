@@ -442,14 +442,19 @@ ssl_command() {  # add / replace / remove SSL on an existing installation
     echo "  1) Domain with Let's Encrypt"
     echo "  2) Custom certificate files"
     echo "  3) Remove SSL (revert to localhost only)"
-    read -rp "Choose: " ssl_choice
+    while :; do
+        read -rp "Choose: " ssl_choice
+        case "$ssl_choice" in
+            1|2|3) break ;;
+            *) warn "Please enter 1, 2 or 3." ;;
+        esac
+    done
     case "$ssl_choice" in
         1) read -rp "Domain (e.g. panel.example.com): " ssl_domain
            [[ -n "$ssl_domain" ]] || { err "No domain given."; exit 1; }
            issue_letsencrypt_cert "$ssl_domain" ;;
         2) configure_custom_cert ;;
         3) disable_ssl ;;
-        *) err "Unknown choice."; exit 1 ;;
     esac
 }
 
