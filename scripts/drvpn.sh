@@ -670,7 +670,7 @@ mtproto_links_command() {
     [[ -f "$MTPROTO_CONFIG" ]] || { err "MTProto proxy is not installed — run 'drvpn install-mtproto'."; exit 1; }
     local secret port ip
     secret="$(grep -oE 'secret = "[^"]+"' "$MTPROTO_CONFIG" | cut -d'"' -f2)"
-    port="$(grep -oE 'bind-to = "[^"]+:\([0-9]+\)"' "$MTPROTO_CONFIG" | grep -oE '[0-9]+$')"
+    port="$(sed -n 's/^bind-to = "[^"]*:\([0-9][0-9]*\)".*//p' "$MTPROTO_CONFIG")"
     ip="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo '<SERVER_IP>')"
     echo "tg://proxy?server=${ip}&port=${port}&secret=${secret}"
     echo "https://t.me/proxy?server=${ip}&port=${port}&secret=${secret}"
