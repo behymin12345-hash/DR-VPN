@@ -105,7 +105,12 @@ See [INSTALL.md](INSTALL.md) for details, environment variables and systemd note
 ### Docker
 
 ```bash
+# pull the published image (built automatically by CI)
+docker pull ghcr.io/behymin12345-hash/dr-vpn:v0.1.0
+
+# or build it yourself from source
 docker build -t dr-vpn .
+
 docker run -d --name dr-vpn --network host -v /var/lib/drvpn:/var/lib/drvpn --env-file .env dr-vpn
 ```
 

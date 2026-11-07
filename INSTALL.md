@@ -113,10 +113,15 @@ uv run alembic upgrade head
 ## 7. Docker (optional)
 
 ```bash
-docker build -t dr-vpn .
+# published image (built by CI from the v0.1.0 tag)
+docker pull ghcr.io/behymin12345-hash/dr-vpn:v0.1.0
+
 docker run -d --name dr-vpn --network host \
   -v /var/lib/drvpn:/var/lib/drvpn \
   --env-file .env dr-vpn
+
+# or build from source:
+# docker build -t dr-vpn .
 ```
 
 ## Backups

@@ -103,7 +103,12 @@ ssh -L 8000:localhost:8000 user@serverip
 ### داکر
 
 ```bash
+# دریافت تصویر منتشرشده (ساخت خودکار توسط CI)
+docker pull ghcr.io/behymin12345-hash/dr-vpn:v0.1.0
+
+# یا ساخت از سورس
 docker build -t dr-vpn .
+
 docker run -d --name dr-vpn --network host -v /var/lib/drvpn:/var/lib/drvpn --env-file .env dr-vpn
 ```
 
