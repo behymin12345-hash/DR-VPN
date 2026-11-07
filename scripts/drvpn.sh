@@ -124,18 +124,65 @@ install_command() {
     require_root
     detect_os
 
-    local db="sqlite" db_url="" ssl_domain="" port="8000" version="main" no_confirm="false"
+    local db="sqlite" db_url="" ssl_domain="" ssl_mode="" port="8000" version="main" no_confirm="false"
+    local PORT_SET="false" DB_SET="false" SSL_SET="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --database) db="$2"; shift 2 ;;
-            --db-url)   db_url="$2"; shift 2 ;;
-            --port)     port="$2"; shift 2 ;;
-            --ssl-domain) ssl_domain="$2"; shift 2 ;;
+            --database) db="$2"; DB_SET="true"; shift 2 ;;
+            --db-url)   db_url="$2"; DB_SET="true"; shift 2 ;;
+            --port)     port="$2"; PORT_SET="true"; shift 2 ;;
+            --ssl-domain) ssl_domain="$2"; SSL_SET="true"; shift 2 ;;
+            --no-ssl)   ssl_mode="skip"; SSL_SET="true"; shift ;;
             --version)  version="v${2#v}"; shift 2 ;;
             --yes|-y)   no_confirm="true"; shift ;;
             *) err "Unknown install option: $1"; exit 1 ;;
         esac
     done
+
+    # ---------------- interactive wizard (PasarGuard-style) ----------------
+    # Prompts run when the installer is attached to a terminal and the
+    # corresponding flag/--yes was not given. `curl | sudo bash -s` without a
+    # terminal falls back to the defaults instead of hanging.
+    if [[ "$no_confirm" != "true" && -t 0 ]]; then
+        # port
+        if [[ "$PORT_SET" != "true" ]]; then
+            read -rp "Panel port [8000]: " wizard_port
+            port="${wizard_port:-8000}"
+        fi
+        # database
+        if [[ "$DB_SET" != "true" ]]; then
+            echo "Database:"
+            echo "  1) SQLite (recommended, zero-config)"
+            echo "  2) PostgreSQL"
+            echo "  3) MySQL"
+            echo "  4) Custom database URL"
+            read -rp "Choose [1]: " db_choice
+            case "${db_choice:-1}" in
+                1) db="sqlite" ;;
+                2) db="postgresql" ;;
+                3) db="mysql" ;;
+                4) read -rp "Database URL: " db_url ;;
+                *) warn "Unknown choice, using SQLite."; db="sqlite" ;;
+            esac
+        fi
+        # SSL / domain
+        if [[ "$SSL_SET" != "true" ]]; then
+            echo "SSL certificate:"
+            echo "  1) Domain with Let's Encrypt (needs DNS pointed here + port 8090 reachable)"
+            echo "  2) Custom certificate files"
+            echo "  3) Skip (panel will be reachable on localhost only)"
+            read -rp "Choose [3]: " ssl_choice
+            case "${ssl_choice:-3}" in
+                1) read -rp "Domain (e.g. panel.example.com): " ssl_domain; [[ -n "$ssl_domain" ]] && ssl_mode="domain" || ssl_mode="skip" ;;
+                2) ssl_mode="custom" ;;
+                3|*) ssl_mode="skip" ;;
+            esac
+        fi
+    elif [[ "$no_confirm" != "true" ]]; then
+        warn "No terminal attached — using defaults (port ${port}, SQLite, no SSL)."
+        warn "Run the documented 'sudo bash -c \"\$(curl …)\" @ install' pattern to get the interactive wizard, or pass flags / --yes."
+    fi
+    [[ -n "$ssl_domain" ]] && ssl_mode="domain"
 
     if service_exists; then
         if [[ "$no_confirm" == "true" ]]; then
@@ -227,8 +274,6 @@ install_command() {
     install_dashboard_build "$version"
 
     # --- systemd service
-
-    # --- systemd service
     msg "Creating systemd service…"
     cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<UNIT
 [Unit]
@@ -275,14 +320,21 @@ WRAPPER
         exit 1
     fi
 
-    # --- SSL (optional)
-    if [[ -n "$ssl_domain" ]]; then
-        setup_ssl "$ssl_domain" "$port"
-    else
-        warn "No SSL configured: the panel only accepts localhost connections."
-        warn "Re-install with --ssl-domain <domain>, or use an SSH tunnel for now:"
-        warn "    ssh -L ${port}:localhost:${port} user@server"
-    fi
+    # --- SSL (wizard result)
+    local ssl_active_domain=""
+    case "$ssl_mode" in
+        domain)
+            issue_letsencrypt_cert "$ssl_domain" && ssl_active_domain="$ssl_domain"
+            ;;
+        custom)
+            configure_custom_cert && ssl_active_domain="custom"
+            ;;
+        *)
+            warn "No SSL configured: the panel only accepts localhost connections."
+            warn "Add a domain later with:  ${GREEN}drvpn ssl${NC}   or use an SSH tunnel now:"
+            warn "    ssh -L ${port}:localhost:${port} user@server"
+            ;;
+    esac
 
     # --- temp key + summary
     local temp_key=""
@@ -295,10 +347,12 @@ WRAPPER
     echo -e " Files:        ${APP_DIR}"
     echo -e " Data:         ${DATA_DIR}"
     echo -e " Config:       ${APP_DIR}/.env"
-    if [[ -n "$ssl_domain" ]]; then
-        echo -e " Dashboard:    ${CYAN}https://${ssl_domain}:${port}/dashboard/${NC}"
+    if [[ -n "$ssl_active_domain" && "$ssl_active_domain" != "custom" ]]; then
+        echo -e " Dashboard:    ${CYAN}https://${ssl_active_domain}:${port}/dashboard/${NC}"
+    elif [[ "$ssl_active_domain" == "custom" ]]; then
+        echo -e " Dashboard:    ${CYAN}https://<your-domain>:${port}/dashboard/${NC}  (custom certificate installed)"
     else
-        echo -e " Dashboard:    ${CYAN}http://localhost:${port}/dashboard/${NC}  (localhost only — see SSL note above)"
+        echo -e " Dashboard:    ${CYAN}http://localhost:${port}/dashboard/${NC}  (localhost only — run 'drvpn ssl' to add a domain)"
     fi
     if [[ -n "$temp_key" ]]; then
         echo -e " Setup key:    ${BOLD}${YELLOW}${temp_key}${NC}"
@@ -308,8 +362,22 @@ WRAPPER
     echo -e "${BOLD}${GREEN}==============================================${NC}"
 }
 
-setup_ssl() {
-    local domain="$1" panel_port="$2"
+write_ssl_env() {  # write cert/key paths into .env and restart the service
+    local cert_file="$1" key_file="$2" ca_type="${3:-public}"
+    sed -i 's|^\(# \)\?UVICORN_SSL_CERTFILE.*|UVICORN_SSL_CERTFILE = "'"$cert_file"'"|' "$APP_DIR/.env"
+    sed -i 's|^\(# \)\?UVICORN_SSL_KEYFILE.*|UVICORN_SSL_KEYFILE = "'"$key_file"'"|'  "$APP_DIR/.env"
+    sed -i 's|^\(# \)\?UVICORN_SSL_CA_TYPE.*|UVICORN_SSL_CA_TYPE = "'"$ca_type"'"|' "$APP_DIR/.env"
+    grep -q "^UVICORN_SSL_CERTFILE" "$APP_DIR/.env" || echo "UVICORN_SSL_CERTFILE = \"${cert_file}\"" >> "$APP_DIR/.env"
+    grep -q "^UVICORN_SSL_KEYFILE"  "$APP_DIR/.env" || echo "UVICORN_SSL_KEYFILE = \"${key_file}\""  >> "$APP_DIR/.env"
+    grep -q "^UVICORN_SSL_CA_TYPE"  "$APP_DIR/.env" || echo "UVICORN_SSL_CA_TYPE = \"${ca_type}\""  >> "$APP_DIR/.env"
+    msg "Restarting the service with SSL…"
+    systemctl restart "$SERVICE_NAME"
+    sleep 3
+    service_running && msg "SSL active — panel now serves HTTPS." || { err "Service failed after enabling SSL — check journalctl -u ${SERVICE_NAME}"; return 1; }
+}
+
+issue_letsencrypt_cert() {  # $1 = domain
+    local domain="$1"
     msg "Setting up SSL certificate for ${domain} (acme.sh, standalone HTTP)…"
     apt_install socat openssl >/dev/null 2>&1 || true
     local acme="$HOME/.acme.sh/acme.sh"
@@ -321,14 +389,49 @@ setup_ssl() {
         err "Certificate issuance failed (is port 8090 reachable from the internet and DNS pointing here?)."
         return 1
     fi
-    sed -i "s|^#\? *UVICORN_SSL_CERTFILE *=.*|UVICORN_SSL_CERTFILE = \"${cert_dir}/cert.pem\"|" "$APP_DIR/.env"
-    sed -i "s|^#\? *UVICORN_SSL_KEYFILE *=.*|UVICORN_SSL_KEYFILE = \"${cert_dir}/key.pem\"|"  "$APP_DIR/.env"
-    grep -q "^UVICORN_SSL_CERTFILE" "$APP_DIR/.env" || echo "UVICORN_SSL_CERTFILE = \"${cert_dir}/cert.pem\"" >> "$APP_DIR/.env"
-    grep -q "^UVICORN_SSL_KEYFILE"  "$APP_DIR/.env" || echo "UVICORN_SSL_KEYFILE = \"${cert_dir}/key.pem\""  >> "$APP_DIR/.env"
-    systemctl restart "$SERVICE_NAME"
-    (crontab -l 2>/dev/null | grep -v "$acme.*--domain ${domain}"; \
+    write_ssl_env "$cert_dir/cert.pem" "$cert_dir/key.pem" public
+    (crontab -l 2>/dev/null | grep -v "$acme.*-d ${domain} "; \
      echo "0 3 * * * $acme --issue -d ${domain} --standalone --httpport 8090 --server letsencrypt --key-file ${cert_dir}/key.pem --fullchain-file ${cert_dir}/cert.pem --force && systemctl restart ${SERVICE_NAME}") | crontab -
-    msg "SSL certificate installed; renewal cron added (03:00 daily check)."
+    msg "Renewal cron added (03:00 daily check)."
+}
+
+configure_custom_cert() {  # prompt for existing cert/key files
+    read -rp "Path to the certificate file (fullchain.pem): " cert_src
+    read -rp "Path to the private key file (key.pem): " key_src
+    [[ -f "$cert_src" && -f "$key_src" ]] || { err "Certificate or key file not found."; return 1; }
+    local cert_dir="${DATA_DIR}/certs/custom"
+    mkdir -p "$cert_dir"
+    cp "$cert_src" "$cert_dir/cert.pem"
+    cp "$key_src"  "$cert_dir/key.pem"
+    read -rp "Is this certificate from a public/trusted CA? [Y/n]: " ca_reply
+    local ca_type="public"; [[ "$ca_reply" =~ ^[Nn]$ ]] && ca_type="private"
+    write_ssl_env "$cert_dir/cert.pem" "$cert_dir/key.pem" "$ca_type"
+}
+
+disable_ssl() {
+    sed -i 's|^\(# \)\?UVICORN_SSL_CERTFILE.*|# UVICORN_SSL_CERTFILE (disabled)|' "$APP_DIR/.env"
+    sed -i 's|^\(# \)\?UVICORN_SSL_KEYFILE.*|# UVICORN_SSL_KEYFILE (disabled)|'  "$APP_DIR/.env"
+    sed -i 's|^\(# \)\?UVICORN_SSL_CA_TYPE.*|# UVICORN_SSL_CA_TYPE (disabled)|'  "$APP_DIR/.env"
+    msg "Restarting the panel without SSL (localhost only)…"
+    systemctl restart "$SERVICE_NAME"
+}
+
+ssl_command() {  # add / replace / remove SSL on an existing installation
+    require_root
+    service_exists || { err "DR-VPN is not installed."; exit 1; }
+    echo "SSL setup for the running DR-VPN installation:"
+    echo "  1) Domain with Let's Encrypt"
+    echo "  2) Custom certificate files"
+    echo "  3) Remove SSL (revert to localhost only)"
+    read -rp "Choose: " ssl_choice
+    case "$ssl_choice" in
+        1) read -rp "Domain (e.g. panel.example.com): " ssl_domain
+           [[ -n "$ssl_domain" ]] || { err "No domain given."; exit 1; }
+           issue_letsencrypt_cert "$ssl_domain" ;;
+        2) configure_custom_cert ;;
+        3) disable_ssl ;;
+        *) err "Unknown choice."; exit 1 ;;
+    esac
 }
 
 # ----------------------------- update ---------------------------------------
@@ -446,10 +549,13 @@ DR-VPN manager
 Usage: drvpn <command> [options]
 
 Commands:
-  install     Install DR-VPN (options: --database sqlite|postgresql|mysql,
-              --db-url URL, --port N, --ssl-domain DOMAIN, --version X.Y.Z, --yes)
+  install     Install DR-VPN. Interactive wizard when run from a terminal
+              (port, database, SSL/domain). Flags override prompts:
+              --database sqlite|postgresql|mysql, --db-url URL, --port N,
+              --ssl-domain DOMAIN, --no-ssl, --version X.Y.Z, --yes (silent)
   update      Update to the latest version (backs up first)
   uninstall   Remove the service (add --purge to also delete files)
+  ssl         Add/replace/remove the SSL certificate on an existing install
   status      Show service status and health check
   logs [args] Follow/view service logs (journalctl passthrough)
   start|stop|restart   Manage the systemd service
@@ -480,6 +586,7 @@ main() {
         backup)   backup_command "$@" ;;
         restore)  [[ $# -ge 1 ]] || { err "usage: drvpn restore FILE"; exit 1; }; restore_command "$@" ;;
         cli)      cli_command "$@" ;;
+        ssl)      ssl_command ;;
         edit-env) edit_env_command ;;
         version)  version_command ;;
         help|-h|--help) usage ;;

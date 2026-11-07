@@ -82,23 +82,26 @@ projects — see [NOTICE.md](NOTICE.md).
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/behymin12345-hash/DR-VPN/main/scripts/drvpn.sh)" @ install
 ```
 
-The installer detects Ubuntu 20.04/22.04/24.04, installs uv + Python 3.14,
-deploys the prebuilt dashboard, runs migrations, creates the `drvpn` systemd
-service (auto-start on boot), prints a one-time setup key for the owner
-account and exposes a `drvpn` management CLI:
+The installer asks you interactively (panel port, database, SSL/domain —
+PasarGuard-style wizard) and then detects Ubuntu 20.04/22.04/24.04, installs
+uv + Python 3.14, deploys the prebuilt dashboard, runs migrations, creates
+the `drvpn` systemd service (auto-start on boot), prints a one-time setup
+key for the owner account and exposes a `drvpn` management CLI:
 
 ```bash
 drvpn status          # service status + health check
+drvpn ssl             # add/replace/remove the SSL domain later
 drvpn cli generate-temp-key
 drvpn backup          # database + config archive
 drvpn update          # backup -> git pull -> migrate -> restart
 drvpn help            # all commands
 ```
 
-Useful install options: `--port 8000`, `--ssl-domain example.com` (acme.sh),
-`--database sqlite|postgresql|mysql`, `--db-url URL`, `--version X.Y.Z`.
-Without SSL the panel binds to localhost only (security default) — pass a
-domain or use an SSH tunnel for first access.
+Install options (they pre-answer the wizard): `--port 8000`,
+`--ssl-domain example.com`, `--no-ssl`, `--database sqlite|postgresql|mysql`,
+`--db-url URL`, `--version X.Y.Z`, `--yes` (fully silent for automation).
+Without SSL the panel binds to localhost only (security default) — add a
+domain with `drvpn ssl` or use an SSH tunnel for first access.
 
 <details>
 <summary>Manual installation (development)</summary>

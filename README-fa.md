@@ -80,21 +80,25 @@ DR-VPN یک فورک از [PasarGuard](https://github.com/PasarGuard/panel) (AGP
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/behymin12345-hash/DR-VPN/main/scripts/drvpn.sh)" @ install
 ```
 
-نصب‌کننده اوبونتو ۲۰.۰۴/۲۲.۰۴/۲۴.۰۴ را تشخیص می‌دهد، uv + Python 3.14 را نصب
-می‌کند، داشبورد از پیش ساخته‌شده را منتشر می‌کند، مهاجرت‌ها را اجرا می‌کند، سرویس
-systemd با استارت خودکار می‌سازد، کلید یک‌بارمصرف owner را چاپ می‌کند و CLI مدیریتی
-`drvpn` را در اختیار می‌گذارد:
+نصب‌کننده به‌صورت تعاملی می‌پرسد (پورت، دیتابیس، SSL/دامین — ویزارد به سبک
+پاسارگارد) و سپس اوبونتو ۲۰.۰۴/۲۲.۰۴/۲۴.۰۴ را تشخیص می‌دهد، uv + Python 3.14 را
+نصب می‌کند، داشبورد از پیش ساخته‌شده را منتشر می‌کند، مهاجرت‌ها را اجرا می‌کند،
+سرویس systemd با استارت خودکار می‌سازد، کلید یک‌بارمصرف owner را چاپ می‌کند و
+CLI مدیریتی `drvpn` را در اختیار می‌گذارد:
 
 ```bash
 drvpn status                  # وضعیت سرویس + health
+drvpn ssl                     # افزودن/تعویض/حذف دامنه و SSL بعد از نصب
 drvpn cli generate-temp-key
 drvpn backup                  # آرشیو دیتابیس + کانفیگ
 drvpn update                  # بکاپ -> pull -> مهاجرت -> ری‌استارت
 drvpn help
 ```
 
-گزینه‌های نصب: `--port`، `--ssl-domain example.com`، `--database sqlite|postgresql|mysql`،
-`--db-url`، `--version`. بدون SSL پنل فقط روی localhost سرو می‌شود (پیش‌فرض امنیتی).
+گزینه‌های نصب (جواب ویزارد را از قبل می‌دهند): `--port`، `--ssl-domain example.com`،
+`--no-ssl`، `--database sqlite|postgresql|mysql`، `--db-url`، `--version`، `--yes`
+(کاملاً بی‌صدا برای اتوماسیون). بدون SSL پنل فقط روی localhost سرو می‌شود
+(پیش‌فرض امنیتی) — دامنه را بعداً با `drvpn ssl` اضافه کنید.
 
 <details>
 <summary>نصب دستی (توسعه)</summary>
