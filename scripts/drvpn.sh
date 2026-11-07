@@ -11,6 +11,10 @@
 
 set -euo pipefail
 
+# uv-managed Python must live OUTSIDE /root and /home so that systemd
+# hardening (ProtectHome=true) cannot hide it from the service.
+export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-/usr/local/share/uv-python}"
+
 # ----------------------------- defaults -------------------------------------
 APP_DIR="/opt/dr-vpn"
 APP_NAME="drvpn"
@@ -248,8 +252,8 @@ WRAPPER
     fi
 
     # --- temp key + summary
-    local temp_key
-    temp_key="$(bash "$0" cli generate-temp-key 2>/dev/null | tail -1)"
+    local temp_key=""
+    temp_key="$(cli_command generate-temp-key 2>/dev/null | tail -1 || true)"
     echo
     echo -e "${BOLD}${GREEN}=============================================="
     echo -e " DR-VPN installed successfully!"
