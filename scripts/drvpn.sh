@@ -194,7 +194,7 @@ install_command() {
 
     # --- migrations
     msg "Running database migrations…"
-    (cd "$APP_DIR" && uv run alembic upgrade head -q) || { err "Migrations failed."; exit 1; }
+    (cd "$APP_DIR" && uv run alembic upgrade head >/dev/null 2>&1) || { err "Migrations failed."; exit 1; }
 
     # --- systemd service
     msg "Creating systemd service…"
@@ -307,7 +307,7 @@ update_command() {
     msg "Syncing dependencies…"
     (cd "$APP_DIR" && uv sync -q)
     msg "Running migrations…"
-    (cd "$APP_DIR" && uv run alembic upgrade head -q)
+    (cd "$APP_DIR" && uv run alembic upgrade head)
     msg "Restarting service…"
     systemctl restart "$SERVICE_NAME"
     sleep 3
