@@ -203,14 +203,16 @@ install_command() {
         curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh >/dev/null
     fi
 
-    # --- port check
-    if is_port_in_use "$port"; then
-        read -rp "Port ${port} is already in use. Enter another port: " port
-        if is_port_in_use "$port"; then
-            err "Port ${port} is also in use. Aborting."
+    # --- port check (re-asks on a terminal, fails loudly in scripts)
+    while is_port_in_use "$port"; do
+        if [[ -t 0 && "$no_confirm" != "true" ]]; then
+            warn "Port ${port} is already in use."
+            read -rp "Enter another port: " port
+        else
+            err "Port ${port} is already in use — pass a free port with --port, or stop the service using it."
             exit 1
         fi
-    fi
+    done
 
     # --- fetch source
     if [[ -d "$APP_DIR/.git" ]]; then
@@ -298,7 +300,10 @@ PrivateTmp=true
 WantedBy=multi-user.target
 UNIT
     systemctl daemon-reload
-    systemctl enable --now "$SERVICE_NAME" >/dev/null 2>&1
+    # enable + explicit restart: 'enable --now' does NOT restart an
+    # already-running unit, which left stale processes on the old config.
+    systemctl enable "$SERVICE_NAME" >/dev/null 2>&1
+    systemctl restart "$SERVICE_NAME"
 
     # --- CLI wrapper
     cat > /usr/local/bin/drvpn <<'WRAPPER'
