@@ -621,6 +621,44 @@
             </div>
             {% endif %}
 
+            {% if telegram_proxies %}
+            <div class="links-section">
+                <h2>Telegram Proxy</h2>
+                {% for proxy in telegram_proxies %}
+                <div class="link-item">
+                    <input
+                        type="text"
+                        class="link-input"
+                        value="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        readonly
+                    />
+                    <button
+                        class="copy-button"
+                        data-link="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        onclick="copyLink(this.dataset.link, this)"
+                    >
+                        Copy
+                    </button>
+                </div>
+                <div class="link-item">
+                    <input
+                        type="text"
+                        class="link-input"
+                        value="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        readonly
+                    />
+                    <button
+                        class="copy-button"
+                        data-link="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        onclick="copyLink(this.dataset.link, this)"
+                    >
+                        Copy
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {% if apps %}
             <h2 style="text-align: center; font-size: 1.8rem; font-weight: 600; margin-bottom: 25px;">Recommended Applications</h2>
             <div class="applications-container">

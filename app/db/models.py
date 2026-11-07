@@ -6,7 +6,9 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     Column,
+    Integer,
     DateTime,
     Enum as SQLEnum,
     Float,
@@ -1102,3 +1104,19 @@ class TempKey(Base):
     expires_at: Mapped[dt] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[dt | None] = mapped_column(DateTime(timezone=True), default=None)
     used_by_ip: Mapped[str | None] = mapped_column(String(45), default=None)
+
+
+class MtprotoProxy(Base, CreatedAtUTCMixin):
+    """A Telegram MTProto proxy entry that can be shared with users.
+
+    These are managed from the dashboard's Proxy section and rendered on the
+    subscription page so users can add them with one tap.
+    """
+
+    __tablename__ = "mtproto_proxies"
+
+    name: Mapped[str] = mapped_column(String(64), unique=True)
+    server: Mapped[str] = mapped_column(String(255))
+    port: Mapped[int] = mapped_column(Integer)
+    secret: Mapped[str] = mapped_column(String(160))
+    enabled: Mapped[bool] = mapped_column(default=True)

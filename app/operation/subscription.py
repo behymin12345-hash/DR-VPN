@@ -500,11 +500,20 @@ class SubscriptionOperation(BaseOperation):
             format_variables = await self.get_format_variables(user)
             formatted_announce = self._format_announce(sub_settings, format_variables)
 
+            from app.db.crud.mtproto import get_enabled_mtproto_proxies
+
+            telegram_proxies = await get_enabled_mtproto_proxies(db)
             return HTMLResponse(
                 render_template(
                     template,
                     self._build_subscription_body_payload(
-                        user, links, formatted_announce, sub_settings, format_variables, is_hwid_enabled
+                        user,
+                        links,
+                        formatted_announce,
+                        sub_settings,
+                        format_variables,
+                        is_hwid_enabled,
+                        telegram_proxies=telegram_proxies,
                     ),
                 )
             )
@@ -667,6 +676,7 @@ class SubscriptionOperation(BaseOperation):
         sub_settings: SubSettings,
         format_variables: dict,
         is_hwid_enabled: bool,
+        telegram_proxies: list | None = None,
     ) -> dict[str, Any]:
         return {
             "user": SubscriptionUserResponse.model_validate(user),
@@ -678,6 +688,7 @@ class SubscriptionOperation(BaseOperation):
                 format_variables,
                 is_hwid_enabled=is_hwid_enabled,
             ),
+            "telegram_proxies": telegram_proxies or [],
         }
 
     def _build_raw_subscription_payload(

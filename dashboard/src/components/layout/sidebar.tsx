@@ -61,6 +61,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { admin } = useAdmin()
   const canReadSystem = hasPermission(admin, 'system', 'read')
   const canReadHosts = canReadResourcePage(admin, 'hosts')
+  const canReadProxy = canReadResourcePage(admin, 'settings')
   const canReadGroups = canReadResourcePage(admin, 'groups')
   const canReadAdmins = canReadResourcePage(admin, 'admins')
   const canReadApiKeys = canReadResourcePage(admin, 'api_keys')
@@ -221,6 +222,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: 'hosts',
               url: '/hosts',
               icon: ListTodo,
+            },
+          ]
+        : []),
+      ...(canReadProxy
+        ? [
+            {
+              title: 'Telegram Proxy',
+              url: '/proxy',
+              icon: Send,
             },
           ]
         : []),
