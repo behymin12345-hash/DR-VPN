@@ -49,7 +49,7 @@
   "platform": "平台",
   "dashboard": "仪表板",
   "master": "总体",
-  "dashboardDescription": "PasarGuard 管理仪表板",
+  "dashboardDescription": "DR-VPN 管理仪表板",
   "default": "默认",
   "unlimited": "无限制",
   "allStatuses": "所有状态",
@@ -1951,7 +1951,7 @@
   "monitorServers": "监控您的服务器和用户",
   "manageServers": "控制您的服务器详细信息",
   "nodes.addHostForEveryInbound": "为每个入站请求添加此节点作为新主机",
-  "nodes.addNewPasarGuardNode": "添加新的 PasarGuard 节点",
+  "nodes.addNewPasarGuardNode": "添加新的 DR-VPN 节点",
   "nodes.addNode": "添加节点",
   "nodes.addNodeSuccess": "节点 {{name}} 添加成功",
   "nodes.apply": "编辑节点",
@@ -2244,7 +2244,7 @@
     "noHostsDescription": "开始创建您的第一个主机配置。",
     "noSearchResults": "没有主机匹配您的搜索条件。请尝试调整搜索词。"
   },
-  "pasarguard": "PasarGuard",
+  "pasarguard": "DR-VPN",
   "group": {
     "createSuccess": "群组「{{name}}」已成功创建",
     "createFailed": "创建群组「{{name}}」失败",

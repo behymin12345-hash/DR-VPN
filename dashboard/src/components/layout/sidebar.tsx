@@ -3,7 +3,6 @@ import Snowfall from '@/components/common/snowfall'
 import { useTheme } from '@/app/providers/theme-provider'
 import { ThemeToggle } from '@/components/common/theme-toggle'
 import { GithubStar } from '@/components/layout/github-star'
-import { GoalProgress } from '@/components/layout/goal-progress'
 import { NavMain } from '@/components/layout/nav-main'
 import { NavSecondary } from '@/components/layout/nav-secondary'
 import { NavUser } from '@/components/layout/nav-user'
@@ -12,7 +11,7 @@ import { VersionBadge } from '@/components/layout/version-badge'
 import { Button } from '@/components/ui/button'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { DISCUSSION_GROUP, DOCUMENTATION, DONATION_URL, REPO_URL } from '@/constants/Project'
+import { DOCUMENTATION, REPO_URL } from '@/constants/Project'
 import { useAdmin } from '@/hooks/use-admin'
 import useDirDetection from '@/hooks/use-dir-detection'
 import { useSystemVersion } from '@/hooks/use-system-version'
@@ -31,20 +30,17 @@ import {
   FileCode2,
   FileUser,
   Fingerprint,
-  GithubIcon,
   Group,
   Key,
   Layers,
   LayoutDashboardIcon,
   LayoutTemplate,
-  LifeBuoy,
   ListTodo,
   Lock,
   Logs,
   Network,
   Palette,
   PieChart,
-  RssIcon,
   Send,
   Settings,
   Settings2,
@@ -383,14 +379,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ],
       },
     ],
-    navSecondary: [
-      {
-        title: t('supportUs'),
-        url: DONATION_URL,
-        icon: LifeBuoy,
-        target: '_blank',
-      },
-    ],
+    navSecondary: [],
     community: [
       {
         title: 'documentation',
@@ -398,19 +387,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: BookOpen,
         target: '_blank',
       },
-      {
-        title: 'discussionGroup',
-        url: DISCUSSION_GROUP,
-        icon: RssIcon,
-        target: '_blank',
-      },
-      {
-        title: 'github',
-        url: REPO_URL,
-        icon: GithubIcon,
-        target: '_blank',
-      },
-    ],
+    ].filter((item) => item.url),
   }
 
   return (
@@ -421,7 +398,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Link to="/" className="flex items-center gap-2">
             <img
               src={resolvedTheme === 'dark' ? window.location.pathname + 'statics/favicon/logo.png' : window.location.pathname + 'statics/favicon/logo-dark.png'}
-              alt="PasarGuard Logo"
+              alt="DR-VPN Logo"
               className="h-8 w-8 object-contain"
             />
             <span dir={isRTL ? 'rtl' : 'ltr'} className="text-sm font-bold">
@@ -453,10 +430,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     asChild
                     className={cn('relative w-full justify-center !gap-0 transition-opacity duration-200 ease-in-out', showCollapseButton ? 'pointer-events-none opacity-0' : 'opacity-100')}
                   >
-                    <a href={REPO_URL} target="_blank">
+                    <a href={REPO_URL || undefined} target={REPO_URL ? '_blank' : undefined}>
                       <img
                         src={resolvedTheme === 'dark' ? window.location.pathname + 'statics/favicon/logo.png' : window.location.pathname + 'statics/favicon/logo-dark.png'}
-                        alt="PasarGuard Logo"
+                        alt="DR-VPN Logo"
                         className="h-6 w-6 flex-shrink-0 object-contain"
                       />
                       {canReadSystem && hasUpdate && (
@@ -492,10 +469,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ) : state !== 'collapsed' && !isMobile ? (
                 <div className={cn('relative', isRTL ? 'pl-10' : 'pr-10')}>
                   <SidebarMenuButton size="lg" className={cn('w-full !gap-2')}>
-                    <a href={REPO_URL} target="_blank" className="flex min-w-0 flex-1 items-center gap-2">
+                    <a href={REPO_URL || undefined} target={REPO_URL ? '_blank' : undefined} className="flex min-w-0 flex-1 items-center gap-2">
                       <img
                         src={resolvedTheme === 'dark' ? window.location.pathname + 'statics/favicon/logo.png' : window.location.pathname + 'statics/favicon/logo-dark.png'}
-                        alt="PasarGuard Logo"
+                        alt="DR-VPN Logo"
                         className="h-8 w-8 flex-shrink-0 object-contain"
                       />
                       <div className="flex min-w-0 flex-1 flex-col items-start overflow-hidden">
@@ -541,10 +518,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               ) : (
                 <SidebarMenuButton size="lg" asChild className="!gap-2">
-                  <a href={REPO_URL} target="_blank">
+                  <a href={REPO_URL || undefined} target={REPO_URL ? '_blank' : undefined}>
                     <img
                       src={resolvedTheme === 'dark' ? window.location.pathname + 'statics/favicon/logo.png' : window.location.pathname + 'statics/favicon/logo-dark.png'}
-                      alt="PasarGuard Logo"
+                      alt="DR-VPN Logo"
                       className="h-8 w-8 flex-shrink-0 object-contain"
                     />
                     <div className="flex min-w-0 flex-col overflow-hidden">
@@ -570,7 +547,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavMain items={data.navMain} />
           {isOwner(admin) && <NavSecondary items={data.community} label={t('community')} />}
           <NavSecondary items={data.navSecondary} className="mt-auto" />
-          <GoalProgress />
           <div className="flex items-center justify-between px-2 [&>:first-child]:[direction:ltr]">
             {state !== 'collapsed' && <GithubStar />}
             {state !== 'collapsed' && (

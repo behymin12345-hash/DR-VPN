@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="DR-VPN">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#131F38"/>
+      <stop offset="0.55" stop-color="#0A1122"/>
+      <stop offset="1" stop-color="#05060B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.78" r="0.75">
+      <stop offset="0" stop-color="#7C3AED" stop-opacity="0.38"/>
+      <stop offset="0.55" stop-color="#7C3AED" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#7C3AED" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="240" y1="300" x2="800" y2="720">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="0.5" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B5CF6" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0.08"/>
+    </linearGradient>
+  </defs>
+
+  <!-- badge -->
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="url(#glow)"/>
+  <rect x="82" y="82" width="860" height="860" rx="208" fill="none" stroke="url(#bezel)" stroke-width="4"/>
+
+  <!-- DR monogram: stroke-based, rounded terminals -->
+  <g stroke="url(#ink)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- D -->
+    <path d="M 272 328 V 696"/>
+    <path d="M 272 328 A 184 184 0 0 1 272 696"/>
+    <!-- R -->
+    <path d="M 600 328 V 696"/>
+    <path d="M 600 328 A 92 92 0 0 1 600 512"/>
+    <path d="M 659 490 L 776 696"/>
+  </g>
+
+  <!-- network node accents on the arc apexes -->
+  <circle cx="456" cy="512" r="26" fill="#DDD6FE"/>
+  <circle cx="692" cy="416" r="26" fill="#7DD3FC"/>
+</svg>

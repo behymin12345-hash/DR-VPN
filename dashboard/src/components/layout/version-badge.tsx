@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useVersionCheck } from '@/hooks/use-version-check'
+import { UPSTREAM_REPO_URL } from '@/constants/Project'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/components/ui/sidebar'
@@ -18,7 +19,7 @@ export function VersionBadge({ currentVersion, className }: VersionBadgeProps) {
     return null
   }
 
-  const releaseLink = releaseUrl || 'https://github.com/PasarGuard/panel/releases/latest'
+  const releaseLink = releaseUrl || UPSTREAM_REPO_URL + '/releases/latest'
   const showText = isMobile || state === 'expanded'
   const showBadge = state === 'collapsed' && !isMobile
 

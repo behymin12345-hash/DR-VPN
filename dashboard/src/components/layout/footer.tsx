@@ -1,14 +1,14 @@
-import { REPO_URL } from '@/constants/Project'
+import { UPSTREAM_REPO_URL } from '@/constants/Project'
 import { FC } from 'react'
 
 const FooterContent = () => {
   return (
     <p className="text-muted-foreground inline-block flex-grow text-center text-xs">
-      Made with ❤️ by &nbsp;
-      <a className="text-primary hover:underline" href={REPO_URL}>
-        PasarGuard
-      </a>{' '}
-      Team
+      DR-VPN &nbsp;·&nbsp;{' '}
+      {/* AGPL-3.0 attribution: DR-VPN is based on PasarGuard */}
+      <a className="text-primary hover:underline" href={UPSTREAM_REPO_URL} target="_blank" rel="noreferrer">
+        based on PasarGuard
+      </a>
     </p>
   )
 }

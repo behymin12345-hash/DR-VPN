@@ -18,8 +18,8 @@ interface UseVersionCheckOptions {
   enabled?: boolean
 }
 
-const GITHUB_API_URL = 'https://api.github.com/repos/PasarGuard/panel/releases/latest'
-const CACHE_KEY = 'pg_release'
+const GITHUB_API_URL = '' // set to the DR-VPN releases API URL when the public repo exists
+const CACHE_KEY = 'drvpn_release'
 const CACHE_DURATION = 10 * 60 * 1000
 
 function compareVersions(current: string, latest: string): number {
@@ -55,6 +55,9 @@ function setCache(version: string, url: string): void {
 }
 
 async function fetchLatestRelease(): Promise<{ version: string; url: string } | null> {
+  // No public DR-VPN repository yet — report "no update" instead of querying upstream.
+  if (!GITHUB_API_URL) return null
+
   const cached = getCached()
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return { version: cached.version, url: cached.url }

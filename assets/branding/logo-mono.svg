@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="DR-VPN">
+  <!-- Monochrome mark (single color, e.g. print / engraving / watermark) -->
+  <g stroke="#111827" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 272 328 V 696"/>
+    <path d="M 272 328 A 184 184 0 0 1 272 696"/>
+    <path d="M 600 328 V 696"/>
+    <path d="M 600 328 A 92 92 0 0 1 600 512"/>
+    <path d="M 659 490 L 776 696"/>
+  </g>
+  <circle cx="456" cy="512" r="26" fill="#111827"/>
+  <circle cx="692" cy="416" r="26" fill="#111827"/>
+</svg>

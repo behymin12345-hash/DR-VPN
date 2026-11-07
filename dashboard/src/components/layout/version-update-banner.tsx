@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useVersionCheck } from '@/hooks/use-version-check'
+import { UPSTREAM_REPO_URL } from '@/constants/Project'
 import { useTheme } from '@/app/providers/theme-provider'
 import { getGradientByColorTheme, getIndicatorColorByTheme } from '@/constants/ThemeGradients'
 import useDirDetection from '@/hooks/use-dir-detection'
@@ -114,13 +115,13 @@ export function VersionUpdateBanner() {
   const handleCopyCommand = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await copy('pasarguard update')
+    await copy('drvpn update')
     toast.success(t('usersTable.copied'))
   }
 
   if (!isOwnerAdmin || isLoading || !hasUpdate || !isVisible || !latestVersion || !normalizedVersion) return null
 
-  const releaseLink = releaseUrl || 'https://github.com/PasarGuard/panel/releases/latest'
+  const releaseLink = releaseUrl || UPSTREAM_REPO_URL + '/releases/latest'
 
   return (
     <div
@@ -159,7 +160,7 @@ export function VersionUpdateBanner() {
                 onClick={handleCopyCommand}
                 title={t('copy')}
               >
-                pasarguard update
+                drvpn update
               </code>
             </div>
           </div>

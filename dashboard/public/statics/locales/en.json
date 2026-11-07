@@ -49,10 +49,10 @@
       "year": "Yearly"
     }
   },
-  "pasarguard": "PasarGuard",
+  "pasarguard": "DR-VPN",
   "dashboard": "Dashboard",
   "master": "Overall",
-  "dashboardDescription": "PasarGuard Management Dashboard",
+  "dashboardDescription": "DR-VPN Management Dashboard",
   "default": "Default",
   "unlimited": "Unlimited",
   "active": "active",
@@ -1990,7 +1990,7 @@
   "monitorServers": "Monitor your servers and users",
   "manageServers": "Control your server details",
   "nodes.addHostForEveryInbound": "Add this node as a new host for every inbound",
-  "nodes.addNewPasarGuardNode": "Create New PasarGuard Node",
+  "nodes.addNewPasarGuardNode": "Create New DR-VPN Node",
   "nodes.addNodeSuccess": "Node {{name}} created successfully",
   "nodes.apply": "modifyNode",
   "nodes.certificate": "Certificate",
@@ -4160,8 +4160,8 @@
   "hosts.filters.enabledHosts": "Enabled Hosts",
   "hosts.filters.disabledHosts": "Disabled Hosts",
   "donation": {
-    "title": "Support PasarGuard",
-    "message": "Your support helps us improve PasarGuard and build better features for everyone!",
+    "title": "Support DR-VPN",
+    "message": "Your support helps us improve DR-VPN and build better features for everyone!",
     "donate": "Donate Now",
     "starOnGitHub": "Star on GitHub"
   },

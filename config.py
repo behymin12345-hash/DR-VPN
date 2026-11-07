@@ -157,7 +157,7 @@ class TelegramEnvSettings(EnvSettings):
 
 class LoggingSettings(EnvSettings):
     save_to_file: bool = Field(default=False, validation_alias="SAVE_LOGS_TO_FILE")
-    file_path: str = Field(default="pasarguard.log", validation_alias="LOG_FILE_PATH")
+    file_path: str = Field(default="drvpn.log", validation_alias="LOG_FILE_PATH")
     backup_count: int = Field(default=72, validation_alias="LOG_BACKUP_COUNT")
     rotation_enabled: bool = Field(default=False, validation_alias="LOG_ROTATION_ENABLED")
     rotation_interval: int = Field(default=1, validation_alias="LOG_ROTATION_INTERVAL")

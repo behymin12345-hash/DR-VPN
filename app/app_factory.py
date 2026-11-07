@@ -343,7 +343,7 @@ def _warn_deprecated_role():
     if not role.is_deprecated:
         return
     message = (
-        f"ROLE={role.value} is deprecated and will be removed in PasarGuard 7.0.0. "
+        f"ROLE={role.value} is deprecated and will be removed in a future release. "
         "Use ROLE=all-in-one with NATS_ENABLED=1 and UVICORN_WORKERS>1 for multi-worker deployments."
     )
     warnings.warn(message, DeprecationWarning, stacklevel=2)
@@ -359,8 +359,8 @@ def create_app() -> FastAPI:
     _warn_deprecated_role()
 
     app = FastAPI(
-        title="PasarGuardAPI",
-        description="Unified GUI Censorship Resistant Solution",
+        title="DR-VPN API",
+        description="Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard",
         version=__version__,
         lifespan=lifespan,
         openapi_url="/openapi.json" if runtime_settings.docs else None,
@@ -410,7 +410,7 @@ def create_app() -> FastAPI:
 
     _use_route_names_as_operation_ids(app)
 
-    on_startup(lambda: logger.info(f"PasarGuard v{__version__} ({runtime_settings.role.value})"))
+    on_startup(lambda: logger.info(f"DR-VPN v{__version__} ({runtime_settings.role.value})"))
     on_startup(_log_database_pool_budget)
 
     @app.exception_handler(RequestValidationError)

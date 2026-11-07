@@ -45,10 +45,10 @@
       "year": "Ежегодно"
     }
   },
-  "pasarguard": "PasarGuard",
+  "pasarguard": "DR-VPN",
   "dashboard": "Панель управления",
   "master": "Общее",
-  "dashboardDescription": "Панель управления PasarGuard",
+  "dashboardDescription": "Панель управления DR-VPN",
   "default": "По умолчанию",
   "unlimited": "Без ограничений",
   "active": "активный",
@@ -1437,7 +1437,7 @@
   "monitorServers": "Следите за своими серверами и пользователями",
   "manageServers": "Управляйте данными вашего сервера",
   "nodes.addHostForEveryInbound": "Добавить этот узел, как новый хост для каждого inbound",
-  "nodes.addNewPasarGuardNode": "Добавить новый узел PasarGuard",
+  "nodes.addNewPasarGuardNode": "Добавить новый узел DR-VPN",
   "nodes.addNode": "Добавить узел",
   "nodes.addNodeSuccess": "Узел {{name}} успешно добавлен",
   "nodes.apply": "Настройки узла успешно обновлены",

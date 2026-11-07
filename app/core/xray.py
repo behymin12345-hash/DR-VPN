@@ -31,7 +31,7 @@ def _protocols_from_inbounds_by_tag(inbounds_by_tag: dict[str, dict]) -> frozens
 def xray_wireguard_allocatable_addresses(tag: str, addresses) -> list[str]:
     """Client subnets of an Xray WireGuard inbound's settings.address.
 
-    An empty result means the inbound is not managed by PasarGuard. Raises
+    An empty result means the inbound is not managed by DR-VPN. Raises
     ValueError for an address value Xray would reject. The core parser and the
     WireGuard allocation pools share this rule so they agree on managed inbounds.
     """
@@ -49,7 +49,7 @@ def xray_wireguard_allocatable_addresses(tag: str, addresses) -> list[str]:
             raise ValueError(f"{tag} WireGuard address must contain valid IP addresses or CIDRs") from exc
         if not isinstance(address, str):
             raise ValueError(f"{tag} WireGuard address must contain valid IP addresses or CIDRs")  # noqa: TRY004
-        # Xray accepts either a bare IP or a CIDR here. PasarGuard can only
+        # Xray accepts either a bare IP or a CIDR here. DR-VPN can only
         # manage peers when an address supplies a subnet with room to allocate
         # client IPs; valid host addresses and /32-/128 routes remain unmanaged.
         if "/" in address and iface.network.num_addresses >= 4:

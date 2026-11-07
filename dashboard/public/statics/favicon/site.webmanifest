@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "short_name": "",
+  "name": "DR-VPN",
+  "short_name": "DR-VPN",
   "icons": [
     {
       "src": "/statics/favicon/logo-pwa.png",
@@ -18,7 +18,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#1b1b1d",
-  "background_color": "#1b1b1d",
+  "theme_color": "#05060b",
+  "background_color": "#05060b",
   "display": "standalone"
 }
