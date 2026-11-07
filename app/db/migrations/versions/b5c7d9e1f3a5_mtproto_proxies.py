@@ -8,6 +8,8 @@ Create Date: 2026-11-07 00:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 
+from app.db.models import SqliteCompatibleBigInteger
+
 
 # revision identifiers, used by Alembic.
 revision = 'b5c7d9e1f3a5'
@@ -19,7 +21,7 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "mtproto_proxies",
-        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("id", SqliteCompatibleBigInteger(), primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(64), nullable=False, unique=True),
         sa.Column("server", sa.String(255), nullable=False),
         sa.Column("port", sa.Integer(), nullable=False),
