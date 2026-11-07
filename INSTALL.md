@@ -1,7 +1,20 @@
-# INSTALL — DR-VPN (v0.1.0)
+# INSTALL — DR-VPN
 
-Manual installation guide. A one-command Linux installer is planned (roadmap stage 7)
-and is **not** implemented yet — this document describes the manual path.
+## One command (recommended)
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/behymin12345-hash/DR-VPN/main/scripts/drvpn.sh)" @ install
+```
+
+The installer handles everything: dependencies, uv + Python 3.14, the prebuilt
+dashboard, migrations, the `drvpn` systemd service and a one-time setup key.
+Useful options: `--port N`, `--ssl-domain DOMAIN`, `--database sqlite|postgresql|mysql`,
+`--db-url URL`, `--version X.Y.Z`, `--yes`. After installation use `drvpn status`,
+`drvpn backup`, `drvpn update`, `drvpn help`.
+
+---
+
+## Manual installation (development)
 
 ## Requirements
 
@@ -78,9 +91,9 @@ uv run python drvpn-cli.py generate-temp-key
 Use the printed one-time key on the dashboard's setup page to create the owner
 (admin) account, then log in.
 
-## 6. Run as a systemd service (manual unit)
+## 6. Run as a systemd service (manual alternative)
 
-Until the dedicated installer ships, you can create a minimal unit yourself:
+Or simply use the installer, which creates the unit for you. Manual unit:
 
 ```ini
 # /etc/systemd/system/drvpn.service

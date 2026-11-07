@@ -833,6 +833,7 @@ export default function NodesList() {
                     </a>{' '}
                     {t('nodes.noNodesDescription2', { defaultValue: 'and connect it to the panel.' })}
                   </p>
+                  {/* DR-VPN note: nodes run the upstream PasarGuard Go node binary — attribution link kept intentionally */}
                 </div>
               </CardContent>
             </Card>

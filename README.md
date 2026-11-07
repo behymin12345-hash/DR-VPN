@@ -17,10 +17,11 @@
 ---
 
 > [!WARNING]
-> **DR-VPN is an early release (v0.1.0) under active development.** It is functional
-> software (the test suite passes and the panel boots), but the dedicated installer,
-> the reseller module and the performance benchmark reports are still on the roadmap.
-> See the [Roadmap](#️-roadmap) for what is done and what is not.
+> **DR-VPN is an early release (v0.1.1) under active development.** The panel,
+> the one-command installer and the dashboard are functional (the full test
+> suite passes; the installer was tested end-to-end on a fresh Ubuntu 24.04
+> box). Still on the roadmap: resource benchmarks, the reseller ("sponsorship")
+> module and the full dashboard redesign. See the [Roadmap](#️-roadmap).
 
 ## 📖 What is DR-VPN?
 
@@ -32,15 +33,22 @@ configurations and works with remote Xray nodes.
 DR-VPN is a fork of
 [PasarGuard](https://github.com/PasarGuard/panel) (AGPL-3.0), which is itself
 derived from [Marzban](https://github.com/Gozargah/Marzban). DR-VPN's goals are
-a fully independent visual identity, a reseller ("sponsorship") system,
-first-class Persian/English UX, and reduced resource usage on small VPS
+a fully independent visual identity, a reseller ("sponsorship") system, a
+clean English-only dashboard, and reduced resource usage on small VPS
 servers. All credit for the underlying codebase belongs to the upstream
 projects — see [NOTICE.md](NOTICE.md).
+
+## 🖼️ Screenshots
+
+| | |
+|---|---|
+| ![Login](assets/screenshots/01-login.png) | ![Dashboard](assets/screenshots/02-dashboard.png) |
+| ![Users](assets/screenshots/03-users.png) | ![Nodes](assets/screenshots/04-nodes.png) |
 
 ## ✨ Features
 
 **🌐 Web Interface & API**
-- Built-in **Web UI** dashboard (React) with dark/light themes
+- Built-in **Web UI** dashboard (React) with dark/light themes, English-only
 - Fully **REST API** backend (OpenAPI schema included)
 - **Multi-Node** support for infrastructure distribution
 
@@ -66,12 +74,36 @@ projects — see [NOTICE.md](NOTICE.md).
 - **CLI** for setup keys and administration
 - **Multi-language** UI (English / فارسی / Русский / 中文) with full RTL support
 
-## 🚀 Installation (manual, v0.1.0)
+## 🚀 Installation
 
-> A one-command installer script is on the roadmap. For now, install manually.
+### One command (recommended)
 
-Requirements: Linux x86_64 (Ubuntu 20.04/22.04/24.04 recommended) or Windows for
-development, plus [uv](https://docs.astral.sh/uv/).
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/behymin12345-hash/DR-VPN/main/scripts/drvpn.sh)" @ install
+```
+
+The installer detects Ubuntu 20.04/22.04/24.04, installs uv + Python 3.14,
+deploys the prebuilt dashboard, runs migrations, creates the `drvpn` systemd
+service (auto-start on boot), prints a one-time setup key for the owner
+account and exposes a `drvpn` management CLI:
+
+```bash
+drvpn status          # service status + health check
+drvpn cli generate-temp-key
+drvpn backup          # database + config archive
+drvpn update          # backup -> git pull -> migrate -> restart
+drvpn help            # all commands
+```
+
+Useful install options: `--port 8000`, `--ssl-domain example.com` (acme.sh),
+`--database sqlite|postgresql|mysql`, `--db-url URL`, `--version X.Y.Z`.
+Without SSL the panel binds to localhost only (security default) — pass a
+domain or use an SSH tunnel for first access.
+
+<details>
+<summary>Manual installation (development)</summary>
+
+Requirements: Linux x86_64 or Windows, plus [uv](https://docs.astral.sh/uv/).
 
 ```bash
 # 1. Get the code
@@ -102,6 +134,8 @@ ssh -L 8000:localhost:8000 user@serverip
 
 See [INSTALL.md](INSTALL.md) for details, environment variables and systemd notes.
 
+</details>
+
 ### Docker
 
 ```bash
@@ -125,11 +159,12 @@ docker run -d --name dr-vpn --network host -v /var/lib/drvpn:/var/lib/drvpn --en
 |---|---|---|
 | 1 | Repository architecture analysis | ✅ Done |
 | 2 | DR-VPN branding & identity | ✅ Done |
-| 3 | Performance pass, resource profiles, benchmarks | 🔨 In progress (test suite green baseline first) |
-| 4 | Core functionality hardening | ⏳ Planned |
-| 5 | Sponsorship / **reseller** module | ⏳ Planned |
-| 6 | Full dashboard redesign + fa/en default | ⏳ Planned |
-| 7 | Linux installer (install/update/backup scripts, systemd) | ⏳ Planned |
+| 3 | Runnable baseline: syntax fixes, green test suite, first release | ✅ Done |
+| 4 | One-command installer (systemd, backup/restore/update) | ✅ Done |
+| 5 | Performance pass, resource profiles, benchmarks | 🔨 In progress |
+| 6 | Sponsorship / **reseller** module | ⏳ Planned |
+| 7 | Full dashboard redesign | ⏳ Planned |
+| 8 | Security & QA pass | ⏳ Planned |
 | 8 | Security & QA pass | ⏳ Planned |
 | 9 | Mature public release | ⏳ Planned |
 
