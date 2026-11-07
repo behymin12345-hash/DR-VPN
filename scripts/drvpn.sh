@@ -25,6 +25,13 @@ DATA_DIR="/var/lib/dr-vpn"
 BACKUP_DIR="/var/backups/dr-vpn"
 DB_FILE_NAME="db.sqlite3"
 
+# Node runtime (upstream PasarGuard node — kept wire-compatible on purpose)
+NODE_SCRIPT_URL="https://raw.githubusercontent.com/PasarGuard/scripts/main/pg-node.sh"
+NODE_CLI="/usr/local/bin/pg-node"
+NODE_APP_DIR="/opt/pg-node"
+NODE_ENV_FILE="$NODE_APP_DIR/.env"
+NODE_CERT_FILE="/var/lib/pg-node/certs/ssl_cert.pem"
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
 msg()  { echo -e "${GREEN}[DR-VPN]${NC} $*"; }
@@ -458,6 +465,58 @@ ssl_command() {  # add / replace / remove SSL on an existing installation
     esac
 }
 
+# ----------------------------- node management ------------------------------
+# Nodes run the upstream PasarGuard node runtime (Go binary via Docker,
+# managed by its own battle-tested installer). Keeping it as the official
+# upstream flow guarantees panel<->node wire compatibility.
+
+install_node_command() {
+    require_root
+    msg "Installing DR-VPN node runtime (upstream PasarGuard node, Docker based)…"
+    apt_install curl >/dev/null 2>&1 || true
+    if ! command -v docker >/dev/null 2>&1; then
+        msg "Installing Docker…"
+        curl -fsSL https://get.docker.com | sh
+    fi
+    msg "Fetching the node installer…"
+    curl -fsSL "$NODE_SCRIPT_URL" -o "$NODE_CLI" && chmod +x "$NODE_CLI"
+    msg "Starting the node installer — it will ask for API Key, port and certificate:"
+    bash "$NODE_CLI" @ install || true
+    echo
+    echo -e "${BOLD}${GREEN}=============================================="
+    echo -e " Node installed!"
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e " Node env:         ${GREEN}drvpn edit-env-dr${NC}   (SERVICE_PORT / API_KEY / SERVICE_PROTOCOL)"
+    echo -e " Node certificate: ${CYAN}$NODE_CERT_FILE${NC}"
+    echo -e " Node CLI:         ${GREEN}pg-node status|logs|restart${NC}"
+    echo
+    echo -e " ${BOLD}Now connect it to the panel${NC} — Nodes → Create Node:"
+    echo -e "   Node Name:     anything"
+    echo -e "   Node Address:  this server's IP or domain"
+    echo -e "   Node Port:     the SERVICE_PORT you chose (default 62050)"
+    echo -e "   API Key:       the same UUID from the node's .env (API_KEY)"
+    echo -e "   Certificate:   paste the content of $NODE_CERT_FILE"
+    echo -e "   API Port:      62051 (xray API)"
+    echo -e "   Connection:    GRPC unless you chose REST"
+    echo -e "${BOLD}${GREEN}==============================================${NC}"
+}
+
+uninstall_node_command() {
+    require_root
+    [[ -x "$NODE_CLI" ]] || { err "Node installer not found at $NODE_CLI."; exit 1; }
+    bash "$NODE_CLI" @ uninstall
+}
+
+edit_node_env_command() {
+    [[ -f "$NODE_ENV_FILE" ]] || { err "Node env not found at $NODE_ENV_FILE — run 'drvpn install-node' first."; exit 1; }
+    "${EDITOR:-nano}" "$NODE_ENV_FILE"
+    msg "Apply changes with: drvpn node-restart"
+}
+
+node_status_command()  { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" @ status || docker ps --filter name=node; }
+node_logs_command()    { [[ -x "$NODE_CLI" ]] && bash "$NODE_CLI" @ logs "$@" || docker logs -f "$(docker ps -q --filter name=node | head -1)"; }
+node_restart_command() { bash "$NODE_CLI" @ restart; }
+
 # ----------------------------- update ---------------------------------------
 
 update_command() {
@@ -580,6 +639,9 @@ Commands:
   update      Update to the latest version (backs up first)
   uninstall   Remove the service (add --purge to also delete files)
   ssl         Add/replace/remove the SSL certificate on an existing install
+  install-node   Install a node runtime on THIS server (Docker, upstream node)
+  edit-env-dr    Open the node's .env (SERVICE_PORT / API_KEY / protocol)
+  node-status | node-logs | node-restart | uninstall-node
   status      Show service status and health check
   logs [args] Follow/view service logs (journalctl passthrough)
   start|stop|restart   Manage the systemd service
@@ -611,6 +673,13 @@ main() {
         restore)  [[ $# -ge 1 ]] || { err "usage: drvpn restore FILE"; exit 1; }; restore_command "$@" ;;
         cli)      cli_command "$@" ;;
         ssl)      ssl_command ;;
+        install-node)  install_node_command "$@" ;;
+        uninstall-node) uninstall_node_command ;;
+        node-status)   node_status_command ;;
+        node-logs)     node_logs_command "$@" ;;
+        node-restart)  node_restart_command ;;
+        edit-env-dr)   edit_node_env_command ;;
+        edit-node-env) edit_node_env_command ;;
         edit-env) edit_env_command ;;
         version)  version_command ;;
         help|-h|--help) usage ;;
