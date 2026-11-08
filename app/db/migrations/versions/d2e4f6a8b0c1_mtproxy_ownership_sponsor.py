@@ -8,6 +8,8 @@ Create Date: 2026-11-08 00:00:00.000000
 import sqlalchemy as sa
 from alembic import op
 
+from app.db.compiles_types import SqliteCompatibleBigInteger
+
 # revision identifiers, used by Alembic.
 revision = 'd2e4f6a8b0c1'
 down_revision = 'b5c7d9e1f3a5'
