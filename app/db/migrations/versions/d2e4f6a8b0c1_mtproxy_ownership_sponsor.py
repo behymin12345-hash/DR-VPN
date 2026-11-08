@@ -5,9 +5,8 @@ Revises: b5c7d9e1f3a5
 Create Date: 2026-11-08 00:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'd2e4f6a8b0c1'
@@ -21,7 +20,7 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column(
                 "admin_id",
-                sa.Integer(),
+                SqliteCompatibleBigInteger(),
                 sa.ForeignKey("admins.id", ondelete="CASCADE", name="fk_mtproto_proxies_admin_id_admins"),
                 nullable=True,
             )
@@ -29,7 +28,7 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column(
                 "node_id",
-                sa.Integer(),
+                SqliteCompatibleBigInteger(),
                 sa.ForeignKey("nodes.id", ondelete="SET NULL", name="fk_mtproto_proxies_node_id_nodes"),
                 nullable=True,
             )
