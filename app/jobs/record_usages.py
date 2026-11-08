@@ -587,7 +587,7 @@ async def _write_node_user_usage_params(dialect: str, upsert_params: list[dict])
                 )
 
 
-async def record_user_stats_batched(all_node_params: dict, usage_coefficients: dict):
+async def record_user_stats_batched(all_node_params: dict, usage_coefficients: dict, user_coefficients: dict | None = None):
     """Record node-user history immediately using batched dialect-specific UPSERTs."""
     if not all_node_params:
         return
@@ -671,7 +671,7 @@ async def record_user_stats(all_node_params: dict, usage_coefficients: dict, use
         return
 
     created_at = _get_time_bucket()
-    upsert_params = _prepare_node_user_usage_params(all_node_params, usage_coefficients, created_at)
+    upsert_params = _prepare_node_user_usage_params(all_node_params, usage_coefficients, created_at, user_coefficients)
     if not upsert_params:
         return
 
