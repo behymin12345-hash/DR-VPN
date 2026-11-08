@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 import re
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class MtprotoProxyBase(BaseModel):
@@ -29,7 +29,7 @@ class MtprotoProxyBase(BaseModel):
         value = value.strip()
         if not value:
             return None
-        if not (value.startswith("@") or value.startswith("https://t.me/") or value.lstrip("-").isdigit()):
+        if not (value.startswith(("@", "https://t.me/")) or value.lstrip("-").isdigit()):
             raise ValueError("sponsored channel must be @username, a t.me link or a numeric channel id")
         return value
 

@@ -1,13 +1,12 @@
-from fastapi import HTTPException, status
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.mtproto import (
     create_mtproto_proxy,
-    get_enabled_mtproto_proxies,
-    get_mtproto_proxy,
     get_mtproto_proxies,
+    get_mtproto_proxy,
     modify_mtproto_proxy,
     remove_mtproto_proxy,
 )
@@ -35,9 +34,8 @@ class MtprotoProxyOperation(BaseOperation):
         if not admin.is_owner:
             # regular admins always own the proxies they create
             data.admin_id = admin.id
-        elif data.admin_id:
-            if not await self._admin_exists(db, data.admin_id):
-                await self.raise_error("Admin not found", status.HTTP_404_NOT_FOUND, db)
+        elif data.admin_id and not await self._admin_exists(db, data.admin_id):
+            await self.raise_error("Admin not found", status.HTTP_404_NOT_FOUND, db)
         try:
             proxy = await create_mtproto_proxy(db, data)
         except IntegrityError:
@@ -66,9 +64,7 @@ class MtprotoProxyOperation(BaseOperation):
             await self.raise_error("Proxy name already exists", status.HTTP_409_CONFLICT, db)
         return MtprotoProxyResponse.model_validate(proxy)
 
-    async def remove_mtproto_proxy(
-        self, db: AsyncSession, proxy_id: int, admin: AdminDetails
-    ) -> MtprotoProxyResponse:
+    async def remove_mtproto_proxy(self, db: AsyncSession, proxy_id: int, admin: AdminDetails) -> MtprotoProxyResponse:
         proxy = await self._get_owned(db, proxy_id, admin)
         await remove_mtproto_proxy(db, proxy)
         return MtprotoProxyResponse.model_validate(proxy)

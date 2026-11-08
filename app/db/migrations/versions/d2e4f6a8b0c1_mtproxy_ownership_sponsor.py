@@ -18,16 +18,24 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("mtproto_proxies", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("admin_id", sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column("node_id", sa.Integer(), nullable=True))
+        batch_op.add_column(
+            sa.Column(
+                "admin_id",
+                sa.Integer(),
+                sa.ForeignKey("admins.id", ondelete="CASCADE", name="fk_mtproto_proxies_admin_id_admins"),
+                nullable=True,
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "node_id",
+                sa.Integer(),
+                sa.ForeignKey("nodes.id", ondelete="SET NULL", name="fk_mtproto_proxies_node_id_nodes"),
+                nullable=True,
+            )
+        )
         batch_op.add_column(sa.Column("sponsored_channel", sa.String(255), nullable=True))
         batch_op.add_column(sa.Column("tag", sa.String(64), nullable=True))
-        batch_op.create_foreign_key(
-            "fk_mtproto_proxies_admin_id_admins", "mtproto_proxies", ["admin_id"], ["admins.id"], ondelete="CASCADE"
-        )
-        batch_op.create_foreign_key(
-            "fk_mtproto_proxies_node_id_nodes", "mtproto_proxies", ["node_id"], ["nodes.id"], ondelete="SET NULL"
-        )
 
 
 def downgrade() -> None:
