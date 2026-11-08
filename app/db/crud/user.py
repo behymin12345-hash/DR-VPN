@@ -1339,6 +1339,9 @@ async def modify_user(
             else:
                 db_user.status = UserStatus.expired
 
+    if modify.usage_coefficient is not None:
+        db_user.usage_coefficient = modify.usage_coefficient
+
     if modify.data_limit is not None:
         db_user.data_limit = modify.data_limit or None
         if db_user.status not in [UserStatus.expired, UserStatus.disabled]:
