@@ -1109,7 +1109,10 @@ class MtprotoProxy(Base, CreatedAtUTCMixin):
     """A Telegram MTProto proxy entry that can be shared with users.
 
     These are managed from the dashboard's Proxy section and rendered on the
-    subscription page so users can add them with one tap.
+    subscription page so users can add them with one tap. Each proxy belongs
+    to the admin that created it (owners see and manage all of them),
+    optionally references the node server it runs on, and can carry the
+    @MTProxybot sponsored-channel data (channel + tag appended to the secret).
     """
 
     __tablename__ = "mtproto_proxies"
@@ -1119,3 +1122,7 @@ class MtprotoProxy(Base, CreatedAtUTCMixin):
     port: Mapped[int] = mapped_column(Integer)
     secret: Mapped[str] = mapped_column(String(160))
     enabled: Mapped[bool] = mapped_column(default=True)
+    admin_id: Mapped[int | None] = fk_id_column("admins.id", ondelete="CASCADE", default=None)
+    node_id: Mapped[int | None] = fk_id_column("nodes.id", ondelete="SET NULL", default=None)
+    sponsored_channel: Mapped[str | None] = mapped_column(String(255), default=None)
+    tag: Mapped[str | None] = mapped_column(String(64), default=None)

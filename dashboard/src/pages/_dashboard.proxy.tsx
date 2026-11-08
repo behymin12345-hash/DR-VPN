@@ -25,13 +25,16 @@ import {
   getGetMtprotoProxiesQueryKey,
   useModifyMtprotoProxy,
   useRemoveMtprotoProxy,
+  useGetNodes,
 } from '@/service/api'
 import { useClipboard } from '@/hooks/use-clipboard'
 
-const tgLink = (p: { server: string; port: number; secret: string }) =>
-  `tg://proxy?server=${p.server}&port=${p.port}&secret=${p.secret}`
-const httpsLink = (p: { server: string; port: number; secret: string }) =>
-  `https://t.me/proxy?server=${p.server}&port=${p.port}&secret=${p.secret}`
+const fullSecret = (p: { secret: string; tag?: string | null }) =>
+  p.tag ? `dd${p.tag}${p.secret}` : p.secret
+const tgLink = (p: { server: string; port: number; secret: string; tag?: string | null }) =>
+  `tg://proxy?server=${p.server}&port=${p.port}&secret=${fullSecret(p)}`
+const httpsLink = (p: { server: string; port: number; secret: string; tag?: string | null }) =>
+  `https://t.me/proxy?server=${p.server}&port=${p.port}&secret=${fullSecret(p)}`
 
 interface ProxyFormValue {
   name: string
@@ -39,12 +42,26 @@ interface ProxyFormValue {
   port: string
   secret: string
   enabled: boolean
+  sponsoredChannel: string
+  tag: string
+  nodeId: string
 }
 
-const emptyForm: ProxyFormValue = { name: '', server: '', port: '443', secret: '', enabled: true }
+const emptyForm: ProxyFormValue = {
+  name: '',
+  server: '',
+  port: '443',
+  secret: '',
+  enabled: true,
+  sponsoredChannel: '',
+  tag: '',
+  nodeId: '',
+}
 
 export default function ProxyPage() {
   const { data: proxies = [], isLoading } = useGetMtprotoProxies()
+  const { data: nodesResp } = useGetNodes()
+  const nodes = nodesResp?.nodes ?? []
   const queryClient = useQueryClient()
   const { copy } = useClipboard()
 
@@ -74,6 +91,9 @@ export default function ProxyPage() {
       port: String(proxy.port),
       secret: proxy.secret,
       enabled: !!proxy.enabled,
+      sponsoredChannel: proxy.sponsored_channel ?? '',
+      tag: proxy.tag ?? '',
+      nodeId: proxy.node_id ? String(proxy.node_id) : '',
     })
     setDialogOpen(true)
   }
@@ -85,6 +105,9 @@ export default function ProxyPage() {
       port: Number(form.port),
       secret: form.secret.trim(),
       enabled: form.enabled,
+      sponsored_channel: form.sponsoredChannel.trim() || null,
+      tag: form.tag.trim() || null,
+      node_id: form.nodeId ? Number(form.nodeId) : null,
     }
     if (!payload.name || !payload.server || !payload.secret || !payload.port) {
       toast.error('Please fill in all fields')
@@ -127,6 +150,9 @@ export default function ProxyPage() {
           port: proxy.port,
           secret: proxy.secret,
           enabled,
+          sponsored_channel: proxy.sponsored_channel ?? null,
+          tag: proxy.tag ?? null,
+          node_id: proxy.node_id ?? null,
         },
       })
       invalidate()
@@ -169,6 +195,11 @@ export default function ProxyPage() {
                     <span className="text-muted-foreground truncate text-xs">
                       {proxy.server}:{proxy.port}
                     </span>
+                    {proxy.node_id && (
+                      <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
+                        node #{proxy.node_id}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleEnabled(proxy, v)} />
@@ -183,6 +214,11 @@ export default function ProxyPage() {
                     </Button>
                   </div>
                 </div>
+                {proxy.sponsored_channel && (
+                  <p className="text-muted-foreground truncate text-xs">
+                    Sponsored: {proxy.sponsored_channel}
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -248,6 +284,39 @@ export default function ProxyPage() {
             <div className="grid gap-1">
               <Label>Secret</Label>
               <Input value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} placeholder="ee…" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1">
+                <Label>Sponsored channel (optional)</Label>
+                <Input
+                  value={form.sponsoredChannel}
+                  onChange={(e) => setForm({ ...form, sponsoredChannel: e.target.value })}
+                  placeholder="@mychannel"
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label>MTProxybot tag (optional)</Label>
+                <Input
+                  value={form.tag}
+                  onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                  placeholder="16 hex chars"
+                />
+              </div>
+            </div>
+            <div className="grid gap-1">
+              <Label>Node server hosting this proxy (optional)</Label>
+              <select
+                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+                value={form.nodeId}
+                onChange={(e) => setForm({ ...form, nodeId: e.target.value })}
+              >
+                <option value="">— none —</option>
+                {nodes.map((n: { id: number; name: string }) => (
+                  <option key={n.id} value={n.id}>
+                    {n.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <p className="text-muted-foreground text-xs">
               Get the secret from the server running the proxy (`drvpn install-mtproto` prints it, or `drvpn edit-mtproto`).

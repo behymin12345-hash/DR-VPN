@@ -100,6 +100,17 @@
                 text-align: center;
             }
 
+            .sponsored-channel {
+                text-align: center;
+                margin: 0 0 15px;
+                font-size: 1.05rem;
+                color: #666;
+            }
+            .sponsored-channel a {
+                color: #0088cc;
+                font-weight: 600;
+                text-decoration: none;
+            }
             .announcement {
                 background: hsl(216 46% 53% / 0.15);
                 border: 1px solid hsl(var(--primary));
@@ -625,16 +636,25 @@
             <div class="links-section">
                 <h2>Telegram Proxy</h2>
                 {% for proxy in telegram_proxies %}
+                {% set s = ('dd' ~ proxy.tag ~ proxy.secret) if proxy.tag else proxy.secret %}
+                {% if proxy.sponsored_channel %}
+                <div class="sponsored-channel">
+                    <span>Sponsored channel:</span>
+                    <a href="{% if proxy.sponsored_channel.startswith('@') %}https://t.me/{{ proxy.sponsored_channel[1:] }}{% else %}{{ proxy.sponsored_channel }}{% endif %}" target="_blank">
+                        {{ proxy.sponsored_channel }}
+                    </a>
+                </div>
+                {% endif %}
                 <div class="link-item">
                     <input
                         type="text"
                         class="link-input"
-                        value="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        value="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ s }}"
                         readonly
                     />
                     <button
                         class="copy-button"
-                        data-link="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        data-link="tg://proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ s }}"
                         onclick="copyLink(this.dataset.link, this)"
                     >
                         Copy
@@ -644,12 +664,12 @@
                     <input
                         type="text"
                         class="link-input"
-                        value="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        value="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ s }}"
                         readonly
                     />
                     <button
                         class="copy-button"
-                        data-link="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ proxy.secret }}"
+                        data-link="https://t.me/proxy?server={{ proxy.server }}&port={{ proxy.port }}&secret={{ s }}"
                         onclick="copyLink(this.dataset.link, this)"
                     >
                         Copy

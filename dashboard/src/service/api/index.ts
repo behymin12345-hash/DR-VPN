@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.1
+ * OpenAPI spec version: 0.1.2
  */
 import {
   useMutation,
@@ -1812,6 +1812,10 @@ export interface MtprotoProxyCreate {
   /** @maxLength 160 */
   secret: string;
   enabled?: boolean;
+  sponsored_channel?: string | null;
+  tag?: string | null;
+  node_id?: number | null;
+  admin_id?: number | null;
 }
 
 export interface MtprotoProxyModify {
@@ -1827,6 +1831,9 @@ export interface MtprotoProxyModify {
   /** @maxLength 160 */
   secret: string;
   enabled?: boolean;
+  sponsored_channel?: string | null;
+  tag?: string | null;
+  node_id?: number | null;
 }
 
 export interface MtprotoProxyResponse {
@@ -1842,7 +1849,11 @@ export interface MtprotoProxyResponse {
   /** @maxLength 160 */
   secret: string;
   enabled?: boolean;
+  sponsored_channel?: string | null;
+  tag?: string | null;
+  node_id?: number | null;
   id: number;
+  admin_id?: number | null;
 }
 
 export interface NextPlanModel {
