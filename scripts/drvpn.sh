@@ -608,9 +608,11 @@ install_mtproto_command() {
     mkdir -p "$MTPROTO_APP_DIR"
     local secret=""
     if [[ -n "$domain" ]]; then
-        secret="$("$MTPROTO_BIN" generate-secret -c "$domain" 2>/dev/null || true)"
+        # mtg v3: the cloaking hostname is a positional argument
+        secret="$("$MTPROTO_BIN" generate-secret "$domain" 2>/dev/null || true)"
     fi
-    [[ -n "$secret" ]] || secret="$("$MTPROTO_BIN" generate-secret)"
+    [[ -n "$secret" ]] || secret="$("$MTPROTO_BIN" generate-secret "example.com" 2>/dev/null || true)"
+    [[ -n "$secret" ]] || { err "Could not generate the MTProto secret."; exit 1; }
     [[ -n "$secret" ]] || { err "Could not generate the MTProto secret."; exit 1; }
     cat > "$MTPROTO_CONFIG" <<TOML
 secret = "$secret"
