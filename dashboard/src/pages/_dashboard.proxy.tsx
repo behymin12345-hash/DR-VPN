@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Copy, Pencil, QrCode, Trash2 } from 'lucide-react'
+import { Copy, Pencil, QrCode, RefreshCcw, Trash2 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { toast } from 'sonner'
 
@@ -29,7 +29,13 @@ import {
 } from '@/service/api'
 import { useClipboard } from '@/hooks/use-clipboard'
 
-const fullSecret = (p: { secret: string; tag?: string | null }) =>
+const generateMtprotoSecret = () => {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+const fullSecret = (p: { secret: string; tag?: string | null }) => 
   p.tag ? `dd${p.tag}${p.secret}` : p.secret
 const tgLink = (p: { server: string; port: number; secret: string; tag?: string | null }) =>
   `tg://proxy?server=${p.server}&port=${p.port}&secret=${fullSecret(p)}`
@@ -103,15 +109,19 @@ export default function ProxyPage() {
       name: form.name.trim(),
       server: form.server.trim(),
       port: Number(form.port),
-      secret: form.secret.trim(),
+      secret: form.secret.trim() || generateMtprotoSecret(),
       enabled: form.enabled,
       sponsored_channel: form.sponsoredChannel.trim() || null,
       tag: form.tag.trim() || null,
       node_id: form.nodeId ? Number(form.nodeId) : null,
     }
-    if (!payload.name || !payload.server || !payload.secret || !payload.port) {
-      toast.error('Please fill in all fields')
+    if (!payload.name || !payload.server || !payload.port) {
+      toast.error('Name, server and port are required')
       return
+    }
+    if (!form.secret.trim()) {
+      setForm(f => ({ ...f, secret: payload.secret }))
+      toast.success('Secret was generated automatically — it is now on the card')
     }
     try {
       if (editing) {
@@ -283,7 +293,18 @@ export default function ProxyPage() {
             </div>
             <div className="grid gap-1">
               <Label>Secret</Label>
-              <Input value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} placeholder="ee…" />
+              <div className="flex gap-2">
+                <Input value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} placeholder="ee… (leave empty to auto-generate)" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Generate a new secret"
+                  onClick={() => setForm({ ...form, secret: generateMtprotoSecret() })}
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1">
