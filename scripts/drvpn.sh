@@ -98,14 +98,8 @@ service_running() { systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; }
 
 install_dashboard_build() {
     # Deploy the prebuilt dashboard from the matching GitHub release so the
-    # server never needs a Node/bun toolchain. $1 = requested ref (tag or main).
-    local zip_url tag asset
-    if [[ "$1" == main ]]; then
-        tag="$(curl -fsSL "https://api.github.com/repos/behymin12345-hash/DR-VPN/releases/latest" 2>/dev/null | grep -oE '"tag_name": *"[^"]+"' | head -1 | cut -d'"' -f4 || true)"
-        [[ -n "$tag" ]] || { err "Could not resolve the latest release for the dashboard build."; exit 1; }
-    else
-        tag="$1"
-    fi
+    # server never needs a Node/bun toolchain. $1 = release tag (vX.Y.Z).
+    local tag="$1" asset
     asset="https://github.com/behymin12345-hash/DR-VPN/releases/download/${tag}/dashboard-build.zip"
     msg "Deploying prebuilt dashboard (${tag})…"
     local ok="false"
@@ -317,8 +311,9 @@ PROFILE
     msg "Running database migrations…"
     (cd "$APP_DIR" && uv run alembic upgrade head >/dev/null 2>&1) || { err "Migrations failed."; exit 1; }
 
-    # --- prebuilt dashboard (the repo does not ship dashboard/build)
-    install_dashboard_build "$version"
+    # --- prebuilt dashboard (tag resolved from the repo's own version file —
+    # no runtime dependency on the GitHub API)
+    install_dashboard_build "v$(panel_version)"
 
     # --- systemd service
     msg "Creating systemd service…"
@@ -410,6 +405,16 @@ WRAPPER
     fi
     echo -e " CLI:          ${GREEN}drvpn cli generate-temp-key${NC} · ${GREEN}drvpn status${NC} · ${GREEN}drvpn help${NC}"
     echo -e "${BOLD}${GREEN}==============================================${NC}"
+
+    # PasarGuard-style: offer a node on the same server right after install
+    if [[ -t 0 && "$no_confirm" != "true" ]]; then
+        read -rp "Also install a node on this server (runs Xray cores)? [y/N]: " node_reply
+        if [[ "$node_reply" =~ ^[Yy]$ ]]; then
+            install_node_command
+        else
+            echo -e " Later:  ${GREEN}drvpn install-node${NC}  ·  guide: docs/NODE-SETUP.md"
+        fi
+    fi
 }
 
 write_ssl_env() {  # write cert/key paths into .env and restart the service
