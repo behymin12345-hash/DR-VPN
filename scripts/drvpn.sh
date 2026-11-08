@@ -689,6 +689,9 @@ update_command() {
     # stale local modification would block the merge. All real configuration
     # lives in .env / the database, so resetting tracked files is safe.
     git -C "$APP_DIR" checkout -- .
+    # Remove stray untracked files (keep .env, the database and the dashboard
+    # build — it is replaced right after with the fresh release build).
+    git -C "$APP_DIR" clean -fdq -e .env -e dashboard/build -e db.sqlite3
     git -C "$APP_DIR" pull --ff-only
     msg "Syncing dependencies…"
     (cd "$APP_DIR" && uv sync -q)
@@ -698,10 +701,20 @@ update_command() {
     msg "Restarting service…"
     systemctl restart "$SERVICE_NAME"
     sleep 3
-    if service_running; then
-        msg "DR-VPN updated to $(panel_version)."
-    else
+    if ! service_running; then
         err "Service failed to start after update — check: journalctl -u ${SERVICE_NAME} -n 50"
+        exit 1
+    fi
+    local hport
+    hport="$(grep -oE 'UVICORN_PORT *= *[0-9]+' "$APP_DIR/.env" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo 8000)"
+    for _ in $(seq 1 30); do
+        curl -sf "http://127.0.0.1:${hport}/health" >/dev/null 2>&1 && break
+        sleep 1
+    done
+    if curl -sf "http://127.0.0.1:${hport}/health" >/dev/null 2>&1; then
+        msg "DR-VPN updated to $(panel_version) — service healthy on port ${hport}."
+    else
+        err "Updated to $(panel_version) but /health did not respond — check: journalctl -u ${SERVICE_NAME} -n 50"
         exit 1
     fi
 }
