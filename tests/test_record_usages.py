@@ -337,7 +337,7 @@ async def test_non_postgres_history_keeps_immediate_path(monkeypatch: pytest.Mon
 
     await record_usages.record_user_stats(node_params, coefficients)
 
-    immediate_write.assert_awaited_once_with(node_params, coefficients)
+    immediate_write.assert_awaited_once_with(node_params, coefficients, {})
 
 
 @pytest.mark.asyncio
