@@ -50,7 +50,11 @@ def _is_token_valid_for_admin(db_admin: Admin, payload: dict, secret_key: str) -
         return True
     if not payload.get("created_at"):
         return False
-    return db_admin.password_reset_at.astimezone(UTC) <= payload.get("created_at")
+    # 'iat' has second precision: compare against the reset timestamp truncated
+    # to seconds, otherwise a token issued in the same second as a password
+    # reset is wrongly rejected.
+    reset_at = db_admin.password_reset_at.astimezone(UTC).replace(microsecond=0)
+    return reset_at <= payload.get("created_at")
 
 
 def _extract_api_key(request: Request) -> str | None:
