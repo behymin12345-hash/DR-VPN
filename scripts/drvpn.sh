@@ -108,7 +108,13 @@ install_dashboard_build() {
     fi
     asset="https://github.com/behymin12345-hash/DR-VPN/releases/download/${tag}/dashboard-build.zip"
     msg "Deploying prebuilt dashboard (${tag})…"
-    if curl -fsSL -o /tmp/dashboard-build.zip "$asset"; then
+    local ok="false"
+    for attempt in 1 2 3; do
+        if curl -fsSL --retry 2 -o /tmp/dashboard-build.zip "$asset"; then ok="true"; break; fi
+        warn "Download attempt ${attempt}/3 failed (release assets can 503 right after a release) — retrying in 5 s…"
+        sleep 5
+    done
+    if [[ "$ok" == "true" ]]; then
         apt_install unzip >/dev/null 2>&1 || true
         unzip -oq /tmp/dashboard-build.zip -d "$APP_DIR/dashboard/"
         rm -f /tmp/dashboard-build.zip
