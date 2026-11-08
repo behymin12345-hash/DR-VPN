@@ -7,7 +7,6 @@ from app.models.mtproto import (
     MtprotoProxyModify,
     MtprotoProxyResponse,
 )
-from app.operation import OperatorType
 from app.operation.mtproto import mtproto_proxy_operator
 from app.utils import responses
 

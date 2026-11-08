@@ -19,26 +19,26 @@ logger = get_logger("telegram-bot")
 
 class TelegramBotManager:
     def __init__(self):
-        self._bot: "Bot | None" = None
+        self._bot: Bot | None = None
         self._polling_task: asyncio.Task | None = None
         self._lock = Lock()
-        self._dp: "Dispatcher | None" = None
+        self._dp: Dispatcher | None = None
         self._handlers_registered = False
         self._shutdown_in_progress = False
         self._stop_requested = False
         self._settings_key: tuple | None = None
-        self._kv: "KeyValue | None" = None
+        self._kv: KeyValue | None = None
         self._nats_conn = None
 
     @property
-    def dp(self) -> "Dispatcher":
+    def dp(self) -> Dispatcher:
         """Dispatcher is created lazily so deployments with the bot disabled
         never pay the aiogram import/instance cost."""
         if self._dp is None:
             self._dp = self._create_dispatcher()
         return self._dp
 
-    def _create_dispatcher(self) -> "Dispatcher":
+    def _create_dispatcher(self) -> Dispatcher:
         from aiogram import Dispatcher
         from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -49,10 +49,10 @@ class TelegramBotManager:
             return Dispatcher(storage=storage, events_isolation=storage.create_isolation())
         return Dispatcher(storage=MemoryStorage())
 
-    def get_bot(self) -> "Bot | None":
+    def get_bot(self) -> Bot | None:
         return self._bot
 
-    def get_dispatcher(self) -> "Dispatcher":
+    def get_dispatcher(self) -> Dispatcher:
         return self.dp
 
     @staticmethod

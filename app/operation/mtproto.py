@@ -1,12 +1,11 @@
-from fastapi import HTTPException, status
+from fastapi import status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.mtproto import (
     create_mtproto_proxy,
-    get_enabled_mtproto_proxies,
-    get_mtproto_proxy,
     get_mtproto_proxies,
+    get_mtproto_proxy,
     modify_mtproto_proxy,
     remove_mtproto_proxy,
 )

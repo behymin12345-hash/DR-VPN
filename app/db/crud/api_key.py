@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime as dt
 
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -135,9 +135,7 @@ async def increment_api_key_usage(db: AsyncSession, key_id: int) -> int | None:
 
     # Read the committed value back inside the same transaction so we see
     # exactly what we wrote (MySQL does not support UPDATE…RETURNING).
-    new_count_row = await db.execute(
-        select(APIKey.request_count).where(APIKey.id == key_id).with_for_update()
-    )
+    new_count_row = await db.execute(select(APIKey.request_count).where(APIKey.id == key_id).with_for_update())
     new_count = new_count_row.scalar_one()
     await db.commit()
     return new_count

@@ -471,7 +471,9 @@ async def _prepare_subscription_inbound_data(
             hole_timeout_ms=inbound_config.get("xdrive_hole_timeout_ms"),
             template=inbound_config.get("xdrive_template"),
             s3=inbound_config.get("xdrive_s3"),
-            xmux=xs.xmux.model_dump(by_alias=True, exclude_none=True) if xs and xs.xmux else inbound_config.get("xdrive_xmux"),
+            xmux=xs.xmux.model_dump(by_alias=True, exclude_none=True)
+            if xs and xs.xmux
+            else inbound_config.get("xdrive_xmux"),
         )
     elif network in ("ws", "websocket", "httpupgrade"):
         ws = ts.websocket_settings if ts else None
@@ -608,7 +610,7 @@ class HostManager:
             # Deserialize state using JSON
             try:
                 cached_state = json.loads(value.decode("utf-8"))
-            except (json.JSONDecodeError, UnicodeDecodeError):
+            except json.JSONDecodeError, UnicodeDecodeError:
                 self._logger.warning("Failed to decode HostManager state as JSON, ignoring...")
                 return False
 
@@ -621,7 +623,7 @@ class HostManager:
                         converted_state[host_id] = SubscriptionInboundData.model_validate(host_data)
                     else:
                         converted_state[host_id] = host_data
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     self._logger.warning(f"Failed to convert host data for host ID {host_id_str}: {host_data}")
                     continue
 

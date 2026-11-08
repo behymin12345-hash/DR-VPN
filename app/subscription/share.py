@@ -94,6 +94,7 @@ async def generate_subscription(
     randomize_order: bool = False,
 ) -> str | bytes:
     cache_key = make_sub_config_key(user, config_format, as_base64, randomize_order)
+
     async def render() -> str | bytes:
         client_templates = await subscription_client_templates()
         xray_template_overrides = await subscription_xray_templates() if config_format == "xray" else None
@@ -136,7 +137,7 @@ def inject_body_placement(conf: str | bytes, lines: list[str], placement: str, a
     if as_base64:
         try:
             decoded = base64.b64decode(conf).decode()
-        except (ValueError, UnicodeDecodeError):
+        except ValueError, UnicodeDecodeError:
             return conf
         merged = f"{block}\n{decoded}" if placement == "body_start" else f"{decoded}\n{block}"
         return base64.b64encode(merged.encode()).decode()
@@ -200,7 +201,7 @@ def apply_custom_format_variables(format_variables: dict, custom_variables: list
             continue
         try:
             format_variables[key] = raw_value.format_map(base_variables)
-        except (ValueError, KeyError):
+        except ValueError, KeyError:
             format_variables[key] = raw_value
 
     return format_variables
@@ -213,7 +214,7 @@ def _format_dynamic_value(value, format_variables: dict):
             return value
         try:
             return value.format_map(format_variables)
-        except (ValueError, KeyError, AttributeError, IndexError, TypeError):
+        except ValueError, KeyError, AttributeError, IndexError, TypeError:
             # A value the variables cannot fill (stray brace, {0}, {X.y}) is kept as it is
             return value
     if isinstance(value, list):

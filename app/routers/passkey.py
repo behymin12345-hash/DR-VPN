@@ -53,8 +53,10 @@ class PasskeyAuthenticationRequest(BaseModel):
 @router.get("", response_model=list[PasskeyInfo])
 async def list_passkeys(admin: AdminDetails = Depends(get_current), db: AsyncSession = Depends(get_db)):
     rows = (
-        await db.execute(select(AdminPasskey).where(AdminPasskey.admin_id == admin.id).order_by(AdminPasskey.id))
-    ).scalars().all()
+        (await db.execute(select(AdminPasskey).where(AdminPasskey.admin_id == admin.id).order_by(AdminPasskey.id)))
+        .scalars()
+        .all()
+    )
     return [{"id": row.id, "name": row.name} for row in rows]
 
 
@@ -81,8 +83,10 @@ async def list_admin_passkeys(
 ):
     target = await _authorize_target_admin(admin_id, current_admin, db)
     rows = (
-        await db.execute(select(AdminPasskey).where(AdminPasskey.admin_id == target.id).order_by(AdminPasskey.id))
-    ).scalars().all()
+        (await db.execute(select(AdminPasskey).where(AdminPasskey.admin_id == target.id).order_by(AdminPasskey.id)))
+        .scalars()
+        .all()
+    )
     return [{"id": row.id, "name": row.name} for row in rows]
 
 
@@ -105,7 +109,9 @@ async def delete_admin_passkey(
 
 
 @router.delete("/{passkey_id}")
-async def delete_passkey(passkey_id: int, admin: AdminDetails = Depends(get_current), db: AsyncSession = Depends(get_db)):
+async def delete_passkey(
+    passkey_id: int, admin: AdminDetails = Depends(get_current), db: AsyncSession = Depends(get_db)
+):
     passkey = (
         await db.execute(select(AdminPasskey).where(AdminPasskey.id == passkey_id, AdminPasskey.admin_id == admin.id))
     ).scalar_one_or_none()
@@ -220,7 +226,9 @@ async def passkey_login_options(body: PasskeyOptionsRequest, request: Request, d
 
 
 @router.post("/login/verify", response_model=Token)
-async def passkey_login_verify(body: PasskeyAuthenticationRequest, request: Request, db: AsyncSession = Depends(get_db)):
+async def passkey_login_verify(
+    body: PasskeyAuthenticationRequest, request: Request, db: AsyncSession = Depends(get_db)
+):
     username = body.username.strip() if body.username else None
     admin = None
     if username:
@@ -239,6 +247,7 @@ async def passkey_login_verify(body: PasskeyAuthenticationRequest, request: Requ
         if admin is None or admin.status == AdminStatus.disabled:
             raise HTTPException(status_code=401, detail="Incorrect username or passkey")
     import base64
+
     client_data = json.loads(base64.urlsafe_b64decode(body.credential["response"]["clientDataJSON"] + "=="))
     challenge_bytes = base64.urlsafe_b64decode(client_data["challenge"] + "==")
     await _consume_challenge(db, challenge_bytes, "login", admin.id if username else None)
@@ -297,6 +306,7 @@ async def passkey_register_verify(
     if db_admin is None:
         raise HTTPException(status_code=400, detail="Passkeys are unavailable for this account")
     import base64
+
     client_data = json.loads(base64.urlsafe_b64decode(body.credential["response"]["clientDataJSON"] + "=="))
     challenge = base64.urlsafe_b64decode(client_data["challenge"] + "==")
     await _consume_challenge(db, challenge, "register", db_admin.id)
@@ -310,7 +320,15 @@ async def passkey_register_verify(
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Passkey registration failed") from exc
-    db.add(AdminPasskey(admin_id=db_admin.id, credential_id=verified.credential_id, public_key=verified.credential_public_key, sign_count=verified.sign_count, name=body.name.strip() or "This device"))
+    db.add(
+        AdminPasskey(
+            admin_id=db_admin.id,
+            credential_id=verified.credential_id,
+            public_key=verified.credential_public_key,
+            sign_count=verified.sign_count,
+            name=body.name.strip() or "This device",
+        )
+    )
     await db.commit()
     return {"ok": True}
 
@@ -346,7 +364,8 @@ async def admin_passkey_register_verify(
 
 def _credential_id(credential: dict) -> bytes:
     import base64
+
     try:
         return base64.urlsafe_b64decode(credential["rawId"] + "==")
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         raise HTTPException(status_code=400, detail="Invalid passkey credential")
