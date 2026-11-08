@@ -367,5 +367,5 @@ def _credential_id(credential: dict) -> bytes:
 
     try:
         return base64.urlsafe_b64decode(credential["rawId"] + "==")
-    except KeyError, ValueError:
+    except (KeyError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid passkey credential")

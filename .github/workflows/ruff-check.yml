@@ -31,3 +31,6 @@ jobs:
             - name: Run Ruff Format
               run: |
                   ruff check --output-format=github .
+
+            - name: Syntax check (byte-compile)
+              run: python -m compileall -q app main.py

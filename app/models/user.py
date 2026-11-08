@@ -38,6 +38,9 @@ class User(BaseModel):
     proxy_settings: ProxyTable = Field(default_factory=ProxyTable)
     expire: dt | int | None = Field(default=None)
     data_limit: int | None = Field(ge=0, default=None, description="data_limit can be 0 or greater")
+    usage_coefficient: float = Field(
+        default=1.0, ge=0, le=100, description="multiplier applied to this user's counted traffic"
+    )
     data_limit_reset_strategy: DataLimitResetStrategy | None = Field(default=None)
     note: str | None = Field(max_length=500, default=None)
     on_hold_expire_duration: int | None = Field(

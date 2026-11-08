@@ -525,17 +525,20 @@ def _prepare_node_user_usage_params(
     all_node_params: dict,
     usage_coefficients: dict,
     created_at: dt,
+    user_coefficients: dict | None = None,
 ) -> list[dict]:
     """Normalize and aggregate nonzero node-user history deltas."""
+    user_coefficients = user_coefficients or {}
     aggregated_params: defaultdict[tuple[int, int], int] = defaultdict(int)
     for node_id, params in all_node_params.items():
         if not params:
             continue
         coeff = usage_coefficients.get(node_id, 1.0)
         for p in params:
-            value = int(p["value"] * coeff)
+            uid = int(p["uid"])
+            value = int(p["value"] * coeff * user_coefficients.get(uid, 1.0))
             if value:
-                aggregated_params[(int(p["uid"]), node_id)] += value
+                aggregated_params[(uid, node_id)] += value
 
     return [
         {
@@ -591,7 +594,7 @@ async def record_user_stats_batched(all_node_params: dict, usage_coefficients: d
 
     created_at = _get_time_bucket()
     dialect = await get_dialect()
-    upsert_params = _prepare_node_user_usage_params(all_node_params, usage_coefficients, created_at)
+    upsert_params = _prepare_node_user_usage_params(all_node_params, usage_coefficients, created_at, user_coefficients)
     await _write_node_user_usage_params(dialect, upsert_params)
 
 
@@ -657,14 +660,14 @@ async def flush_user_usage_history_if_due(now_monotonic: float | None = None) ->
         return await _flush_pending_user_usage_history_locked(now_monotonic)
 
 
-async def record_user_stats(all_node_params: dict, usage_coefficients: dict) -> None:
+async def record_user_stats(all_node_params: dict, usage_coefficients: dict, user_coefficients: dict | None = None) -> None:
     """Coalesce PostgreSQL history writes while preserving immediate fallback paths."""
     if not all_node_params:
         return
 
     dialect = await get_dialect()
     if dialect != "postgresql":
-        await record_user_stats_batched(all_node_params, usage_coefficients)
+        await record_user_stats_batched(all_node_params, usage_coefficients, user_coefficients)
         return
 
     created_at = _get_time_bucket()
@@ -828,7 +831,7 @@ def _process_users_stats_response(stats_response):
     for uid, value in params.items():
         try:
             validated_params.append({"uid": int(uid), "value": value})
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             invalid_uids.append(uid)
 
     return validated_params, invalid_uids
@@ -974,18 +977,33 @@ async def calculate_admin_usage(users_usage: list) -> tuple[dict, set[int]]:
     return admin_usage, set(user_admin_map.keys())
 
 
-async def calculate_users_usage(api_params: dict, usage_coefficient: dict) -> list:
+async def _fetch_user_coefficients(uids: set[int]) -> dict[int, float]:
+    """Per-user traffic multipliers for the uids seen in this cycle."""
+    coefficients: dict[int, float] = {}
+    if not uids:
+        return coefficients
+    async with GetDB() as db:
+        for uid_batch in _chunked(list(uids), USER_ADMIN_LOOKUP_BATCH_SIZE):
+            stmt = select(User.id, User.usage_coefficient).where(User.id.in_(uid_batch))
+            for uid, coeff in (await db.execute(stmt)).fetchall():
+                coefficients[int(uid)] = float(coeff if coeff is not None else 1.0)
+    return coefficients
+
+
+async def calculate_users_usage(api_params: dict, usage_coefficient: dict, user_coefficients: dict | None = None) -> list:
     """Aggregate user usage across nodes with coefficients applied."""
     if not api_params:
         return []
 
+    user_coefficients = user_coefficients or {}
     users_usage: dict[int, int] = defaultdict(int)
     for node_id, params in api_params.items():
         if not params:
             continue
         coeff = usage_coefficient.get(node_id, 1)
         for param in params:
-            users_usage[int(param["uid"])] += int(param["value"] * coeff)
+            uid = int(param["uid"])
+            users_usage[uid] += int(param["value"] * coeff * user_coefficients.get(uid, 1.0))
 
     return [{"uid": uid, "value": value} for uid, value in users_usage.items()]
 
@@ -1029,7 +1047,10 @@ async def _record_user_usages_impl():
             usage_coefficient[node_id] = coeff
             api_params[node_id] = stats
 
-        users_usage = await calculate_users_usage(api_params, usage_coefficient)
+        all_uids = {int(p["uid"]) for params in api_params.values() for p in params}
+        user_coefficients = await _fetch_user_coefficients(all_uids) if all_uids else {}
+
+        users_usage = await calculate_users_usage(api_params, usage_coefficient, user_coefficients)
         if not users_usage:
             logger.debug("No user usage to record")
             return
@@ -1083,7 +1104,7 @@ async def _record_user_usages_impl():
                 filtered_node_params[node_id] = filtered_params
 
         if filtered_node_params:
-            await record_user_stats(filtered_node_params, usage_coefficient)
+            await record_user_stats(filtered_node_params, usage_coefficient, user_coefficients)
             total_records = sum(len(params) for params in filtered_node_params.values())
             logger.debug(f"Processed {total_records} node user usage deltas across {len(filtered_node_params)} nodes")
 
