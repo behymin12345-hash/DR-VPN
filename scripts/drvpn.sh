@@ -355,7 +355,7 @@ WRAPPER
     # wait for boot — fail loudly with logs if it never comes up
     msg "Waiting for the panel to start…"
     local host="127.0.0.1" healthy="false"
-    for _ in $(seq 1 45); do
+    for _ in $(seq 1 90); do
         if curl -sf "http://${host}:${port}/health" >/dev/null 2>&1; then healthy="true"; break; fi
         sleep 1
     done
@@ -720,7 +720,7 @@ update_command() {
     fi
     local hport
     hport="$(grep -oE 'UVICORN_PORT *= *[0-9]+' "$APP_DIR/.env" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo 8000)"
-    for _ in $(seq 1 30); do
+    for _ in $(seq 1 90); do
         curl -sf "http://127.0.0.1:${hport}/health" >/dev/null 2>&1 && break
         sleep 1
     done
