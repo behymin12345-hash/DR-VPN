@@ -1041,6 +1041,12 @@ function UserModal({ isDialogOpen, onOpenChange, form, editingUser, editingUserI
         const preparedValues = {
           ...valuesWithoutNextPlan,
           data_limit: typeof values.data_limit === 'string' ? parseFloat(values.data_limit) : values.data_limit,
+          usage_coefficient:
+            values.usage_coefficient === undefined || values.usage_coefficient === null
+              ? 1
+              : typeof values.usage_coefficient === 'string'
+                ? parseFloat(values.usage_coefficient)
+                : values.usage_coefficient,
           hwid_limit: typeof values.hwid_limit === 'string' ? parseFloat(values.hwid_limit) : values.hwid_limit,
           on_hold_expire_duration:
             status === 'on_hold' && values.on_hold_expire_duration
@@ -1641,6 +1647,32 @@ function UserModal({ isDialogOpen, onOpenChange, form, editingUser, editingUserI
                                 )}
                               />
                             )}
+                            <FormField
+                              control={form.control}
+                              name="usage_coefficient"
+                              render={({ field }) => (
+                                <FormItem className={cn('relative h-full min-w-0', showResetStrategy ? 'flex-1' : 'flex-1')}>
+                                  <FormLabel>{t('userDialog.usageCoefficient', { defaultValue: 'Usage Coefficient (×)' })}</FormLabel>
+                                  <FormControl>
+                                    <DecimalInput
+                                      placeholder="1"
+                                      value={field.value}
+                                      emptyValue={1}
+                                      zeroValue={0}
+                                      onValueChange={value => {
+                                        const nextValue = value ?? 1
+                                        field.onChange(nextValue)
+                                        handleFieldChange('usage_coefficient', nextValue)
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <p className="text-muted-foreground text-xs">
+                                    {t('userDialog.usageCoefficientHint', { defaultValue: 'Counted traffic multiplier: 10 GB quota × 2 = ends after 5 GB of real traffic' })}
+                                  </p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                             <div className={cn('flex h-full min-w-0 items-start gap-4', showResetStrategy ? 'flex-1' : 'w-full lg:w-3/8')}>
                               {status === 'on_hold' ? (
                                 <FormField

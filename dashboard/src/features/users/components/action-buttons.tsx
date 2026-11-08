@@ -198,6 +198,7 @@ const buildUserEditFormValues = (user: UserResponse): UseEditFormValues => ({
   username: user.username,
   status: user.status === 'active' || user.status === 'on_hold' || user.status === 'disabled' ? (user.status as UseEditFormValues['status']) : 'active',
   data_limit: user.data_limit ? bytesToFormGigabytes(Number(user.data_limit)) : 0,
+  usage_coefficient: user.usage_coefficient ?? 1,
   hwid_limit: user.hwid_limit ?? null,
   expire: normalizeDatePickerValueForEditForm(user.expire),
   note: user.note || '',

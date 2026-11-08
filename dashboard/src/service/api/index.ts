@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.2
+ * OpenAPI spec version: 0.1.3
  */
 import {
   useMutation,
@@ -2421,6 +2421,12 @@ export interface SubscriptionUserResponse {
   expire?: string | number | null;
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
+  /**
+     * multiplier applied to this user's counted traffic
+     * @minimum 0
+     * @maximum 100
+     */
+  usage_coefficient?: number;
   data_limit_reset_strategy?: DataLimitResetStrategy | null;
   /** on_hold_expire_duration can be 0 or greater in seconds */
   on_hold_expire_duration?: number | null;
@@ -2530,6 +2536,12 @@ export interface UserCreate {
   expire?: string | number | null;
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
+  /**
+     * multiplier applied to this user's counted traffic
+     * @minimum 0
+     * @maximum 100
+     */
+  usage_coefficient?: number;
   data_limit_reset_strategy?: DataLimitResetStrategy | null;
   note?: string | null;
   /** on_hold_expire_duration can be 0 or greater in seconds */
@@ -2581,6 +2593,12 @@ export interface UserListItem {
   expire?: string | number | null;
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
+  /**
+     * multiplier applied to this user's counted traffic
+     * @minimum 0
+     * @maximum 100
+     */
+  usage_coefficient?: number;
   data_limit_reset_strategy?: DataLimitResetStrategy | null;
   note?: string | null;
   /** on_hold_expire_duration can be 0 or greater in seconds */
@@ -2608,6 +2626,12 @@ export interface UserModify {
   expire?: string | number | null;
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
+  /**
+     * multiplier applied to this user's counted traffic
+     * @minimum 0
+     * @maximum 100
+     */
+  usage_coefficient?: number;
   data_limit_reset_strategy?: DataLimitResetStrategy | null;
   note?: string | null;
   /** on_hold_expire_duration can be 0 or greater in seconds */
@@ -2625,6 +2649,12 @@ export interface UserResponse {
   expire?: string | number | null;
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
+  /**
+     * multiplier applied to this user's counted traffic
+     * @minimum 0
+     * @maximum 100
+     */
+  usage_coefficient?: number;
   data_limit_reset_strategy?: DataLimitResetStrategy | null;
   note?: string | null;
   /** on_hold_expire_duration can be 0 or greater in seconds */

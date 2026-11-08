@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Copy, Plus, QrCode, Trash2 } from 'lucide-react'
+import { Copy, Pencil, QrCode, Trash2 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { toast } from 'sonner'
 
@@ -203,8 +203,8 @@ export default function ProxyPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleEnabled(proxy, v)} />
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(proxy)}>
-                      <Plus className="h-4 w-4 rotate-45" />
+                    <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(proxy)}>
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setQrLink(tgLink(proxy))}>
                       <QrCode className="h-4 w-4" />
