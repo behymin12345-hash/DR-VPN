@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.3
+ * OpenAPI spec version: 0.1.6
  */
 import {
   useMutation,
@@ -1787,6 +1787,18 @@ export interface InboundSummary {
   network?: string | null;
   security?: string | null;
   fingerprint?: string | null;
+}
+
+export interface LocationIdsRequest {
+  /**
+     * @minItems 1
+     * @maxItems 88
+     */
+  ids: string[];
+}
+
+export interface LocationModeRequest {
+  mode: string;
 }
 
 export interface MasqueSettings {
@@ -11268,6 +11280,494 @@ export const useRemoveMtprotoProxy = <TError = ErrorType<Unauthorized | Forbidde
         TContext
       > => {
       return useMutation(getRemoveMtprotoProxyMutationOptions(options), queryClient);
+    }
+
+export const getLocationsStatusUrl = () => {
+
+
+
+
+  return `/api/locations/status`
+}
+
+/**
+ * Live tor-ml status: installed, mode, per-location running state.
+ * @summary Locations Status
+ */
+export const locationsStatus = async ( options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getLocationsStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLocationsStatusQueryKey = () => {
+    return [
+    `/api/locations/status`
+    ] as const;
+    }
+
+
+export const getLocationsStatusQueryOptions = <TData = Awaited<ReturnType<typeof locationsStatus>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLocationsStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof locationsStatus>>> = ({ signal }) => locationsStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LocationsStatusQueryResult = NonNullable<Awaited<ReturnType<typeof locationsStatus>>>
+export type LocationsStatusQueryError = ErrorType<unknown>
+
+
+export function useLocationsStatus<TData = Awaited<ReturnType<typeof locationsStatus>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof locationsStatus>>,
+          TError,
+          Awaited<ReturnType<typeof locationsStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLocationsStatus<TData = Awaited<ReturnType<typeof locationsStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof locationsStatus>>,
+          TError,
+          Awaited<ReturnType<typeof locationsStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLocationsStatus<TData = Awaited<ReturnType<typeof locationsStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Locations Status
+ */
+
+export function useLocationsStatus<TData = Awaited<ReturnType<typeof locationsStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof locationsStatus>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLocationsStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getInstallTorMlUrl = () => {
+
+
+
+
+  return `/api/locations/install`
+}
+
+/**
+ * Install tor-ml on this server (the panel server itself). Long-running.
+ * @summary Install Tor Ml
+ */
+export const installTorMl = async ( options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getInstallTorMlUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getInstallTorMlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installTorMl>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof installTorMl>>, TError,void, TContext> => {
+
+const mutationKey = ['installTorMl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof installTorMl>>, void> = () => {
+
+
+          return  installTorMl(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InstallTorMlMutationResult = NonNullable<Awaited<ReturnType<typeof installTorMl>>>
+
+    export type InstallTorMlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Install Tor Ml
+ */
+export const useInstallTorMl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installTorMl>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof installTorMl>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getInstallTorMlMutationOptions(options), queryClient);
+    }
+
+export const getStartLocationsUrl = () => {
+
+
+
+
+  return `/api/locations/start`
+}
+
+/**
+ * @summary Start Locations
+ */
+export const startLocations = async (locationIdsRequest: LocationIdsRequest, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getStartLocationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(locationIdsRequest)
+  }
+);}
+
+
+
+
+
+export const getStartLocationsMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof startLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext> => {
+
+const mutationKey = ['startLocations'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startLocations>>, {data: BodyType<LocationIdsRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startLocations(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartLocationsMutationResult = NonNullable<Awaited<ReturnType<typeof startLocations>>>
+    export type StartLocationsMutationBody = BodyType<LocationIdsRequest>
+    export type StartLocationsMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Start Locations
+ */
+export const useStartLocations = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startLocations>>,
+        TError,
+        {data: BodyType<LocationIdsRequest>},
+        TContext
+      > => {
+      return useMutation(getStartLocationsMutationOptions(options), queryClient);
+    }
+
+export const getStopLocationsUrl = () => {
+
+
+
+
+  return `/api/locations/stop`
+}
+
+/**
+ * @summary Stop Locations
+ */
+export const stopLocations = async (locationIdsRequest: LocationIdsRequest, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getStopLocationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(locationIdsRequest)
+  }
+);}
+
+
+
+
+
+export const getStopLocationsMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext> => {
+
+const mutationKey = ['stopLocations'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopLocations>>, {data: BodyType<LocationIdsRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  stopLocations(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopLocationsMutationResult = NonNullable<Awaited<ReturnType<typeof stopLocations>>>
+    export type StopLocationsMutationBody = BodyType<LocationIdsRequest>
+    export type StopLocationsMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Stop Locations
+ */
+export const useStopLocations = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopLocations>>, TError,{data: BodyType<LocationIdsRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof stopLocations>>,
+        TError,
+        {data: BodyType<LocationIdsRequest>},
+        TContext
+      > => {
+      return useMutation(getStopLocationsMutationOptions(options), queryClient);
+    }
+
+export const getPingLocationUrl = (locId: string,) => {
+
+
+
+
+  return `/api/locations/ping/${locId}`
+}
+
+/**
+ * @summary Ping Location
+ */
+export const pingLocation = async (locId: string, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getPingLocationUrl(locId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPingLocationQueryKey = (locId: string,) => {
+    return [
+    `/api/locations/ping/${locId}`
+    ] as const;
+    }
+
+
+export const getPingLocationQueryOptions = <TData = Awaited<ReturnType<typeof pingLocation>>, TError = ErrorType<HTTPValidationError>>(locId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPingLocationQueryKey(locId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof pingLocation>>> = ({ signal }) => pingLocation(locId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: locId !== null && locId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PingLocationQueryResult = NonNullable<Awaited<ReturnType<typeof pingLocation>>>
+export type PingLocationQueryError = ErrorType<HTTPValidationError>
+
+
+export function usePingLocation<TData = Awaited<ReturnType<typeof pingLocation>>, TError = ErrorType<HTTPValidationError>>(
+ locId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof pingLocation>>,
+          TError,
+          Awaited<ReturnType<typeof pingLocation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePingLocation<TData = Awaited<ReturnType<typeof pingLocation>>, TError = ErrorType<HTTPValidationError>>(
+ locId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof pingLocation>>,
+          TError,
+          Awaited<ReturnType<typeof pingLocation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePingLocation<TData = Awaited<ReturnType<typeof pingLocation>>, TError = ErrorType<HTTPValidationError>>(
+ locId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Ping Location
+ */
+
+export function usePingLocation<TData = Awaited<ReturnType<typeof pingLocation>>, TError = ErrorType<HTTPValidationError>>(
+ locId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingLocation>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPingLocationQueryOptions(locId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetModeUrl = () => {
+
+
+
+
+  return `/api/locations/mode`
+}
+
+/**
+ * @summary Set Mode
+ */
+export const setMode = async (locationModeRequest: LocationModeRequest, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getSetModeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(locationModeRequest)
+  }
+);}
+
+
+
+
+
+export const getSetModeMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setMode>>, TError,{data: BodyType<LocationModeRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof setMode>>, TError,{data: BodyType<LocationModeRequest>}, TContext> => {
+
+const mutationKey = ['setMode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setMode>>, {data: BodyType<LocationModeRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setMode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetModeMutationResult = NonNullable<Awaited<ReturnType<typeof setMode>>>
+    export type SetModeMutationBody = BodyType<LocationModeRequest>
+    export type SetModeMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Set Mode
+ */
+export const useSetMode = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setMode>>, TError,{data: BodyType<LocationModeRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setMode>>,
+        TError,
+        {data: BodyType<LocationModeRequest>},
+        TContext
+      > => {
+      return useMutation(getSetModeMutationOptions(options), queryClient);
     }
 
 export const getGetHostUrl = (hostId: number,) => {

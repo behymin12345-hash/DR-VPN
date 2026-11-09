@@ -11,6 +11,11 @@ import {
   getCoreConfig,
   useGetNodes,
   useModifyCoreConfig,
+  useLocationsStatus,
+  useStartLocations,
+  useStopLocations,
+  useInstallTorMl,
+  pingLocation,
   CoreResponse,
 } from '@/service/api'
 import { BALANCER_PORT, LOCATIONS, OUTBOUND_PREFIX } from '@/constants/locations'
@@ -34,6 +39,17 @@ export default function LocationsPage() {
   const [binding, setBinding] = useState<Binding>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pinging, setPinging] = useState<string | null>(null)
+  const [pingResults, setPingResults] = useState<Record<string, { ok: boolean; latency?: number; ip?: string }>>({})
+  const statusQuery = useLocationsStatus()
+  const status = (statusQuery.data ?? {}) as {
+    installed?: boolean
+    running_count?: number
+    locations?: Array<{ id: string; running: boolean; cc?: string; name?: string; port?: number }>
+  }
+  const startMutation = useStartLocations()
+  const stopMutation = useStopLocations()
+  const installMutation = useInstallLocations()
   const modifyCore = useModifyCoreConfig()
 
   useEffect(() => {
@@ -89,6 +105,44 @@ export default function LocationsPage() {
   }, [nodeId])
 
   const inbounds = useMemo<string[]>(() => ((core?.config?.inbounds as any[] | undefined) ?? []).map(i => String(i.tag ?? '')).filter(Boolean), [core])
+
+  const runningById = useMemo(() => {
+    const m = new Map<string, boolean>()
+    for (const l of status.locations ?? []) m.set(String(l.id), !!l.running)
+    return m
+  }, [status])
+
+  const doPing = async (locId: string) => {
+    setPinging(locId)
+    try {
+      const res = (await pingLocation(locId)) as { ok?: boolean; latency?: number; ip?: string }
+      setPingResults(p => ({ ...p, [locId]: { ok: !!res.ok, latency: res.latency, ip: res.ip } }))
+    } catch {
+      setPingResults(p => ({ ...p, [locId]: { ok: false } }))
+    } finally {
+      setPinging(null)
+    }
+  }
+
+  const toggleLocation = async (locId: string, running: boolean) => {
+    try {
+      if (running) await stopMutation.mutateAsync({ data: { ids: [locId] } })
+      else await startMutation.mutateAsync({ data: { ids: [locId] } })
+      await statusQuery.refetch()
+    } catch {
+      toast.error('Failed — is tor-ml installed on this server?')
+    }
+  }
+
+  const doInstall = async () => {
+    try {
+      await installMutation.mutateAsync(undefined)
+      toast.success('tor-ml installed')
+      await statusQuery.refetch()
+    } catch {
+      toast.error('Install failed — see server logs')
+    }
+  }
 
   const apply = async () => {
     if (!core) return
@@ -191,6 +245,66 @@ export default function LocationsPage() {
       </Card>
 
       {loading && <p className="text-muted-foreground p-4 text-sm">Loading core config…</p>}
+
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className={status.installed ? 'h-2 w-2 rounded-full bg-green-500' : 'h-2 w-2 rounded-full bg-zinc-400'} />
+              <span className="font-medium">
+                {status.installed ? `tor-ml running — ${status.running_count ?? 0} location(s) up` : 'tor-ml is not installed on this server yet'}
+              </span>
+            </div>
+            {!status.installed && (
+              <Button onClick={doInstall} disabled={installMutation.isPending}>
+                {installMutation.isPending ? 'Installing… (up to 10 min)' : 'Install tor-ml on this server'}
+              </Button>
+            )}
+          </div>
+
+          {status.installed && (
+            <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+              {LOCATIONS.map(l => {
+                const running = runningById.get(l.id) ?? false
+                const pr = pingResults[l.id]
+                return (
+                  <div key={l.id} className="border-input flex items-center justify-between gap-2 rounded-md border p-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={running ? 'h-2 w-2 shrink-0 rounded-full bg-green-500' : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'} />
+                      <span className="truncate text-sm">{l.cc} — {l.name}</span>
+                      <span className="text-muted-foreground text-[10px]">:{l.port}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {pr && (
+                        <span className={pr.ok ? 'text-xs text-green-600' : 'text-xs text-red-500'}>
+                          {pr.ok ? `${Math.round((pr.latency ?? 0) * 1000)}ms` : 'fail'}
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        disabled={pinging === l.id}
+                        onClick={() => doPing(l.id)}
+                      >
+                        ping
+                      </Button>
+                      <Button
+                        variant={running ? 'outline' : 'default'}
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => toggleLocation(l.id, running)}
+                      >
+                        {running ? 'Stop' : 'Start'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {!!inbounds.length && !loading && (
         <div className="flex flex-col gap-3">
