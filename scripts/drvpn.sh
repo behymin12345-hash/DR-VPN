@@ -42,6 +42,10 @@ err()  { echo -e "${RED}[DR-VPN]${NC} $*" >&2; }
 
 require_root() {
     if [[ $EUID -ne 0 ]]; then
+        if command -v sudo >/dev/null 2>&1 && [[ -f "$0" ]]; then
+            msg "Re-running with sudo…"
+            exec sudo bash "$0" "$@"
+        fi
         err "This command must be run as root (use sudo)."
         exit 1
     fi
