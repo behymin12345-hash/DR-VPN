@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator'
 import {
   getCoreConfig,
   getGetMtprotoProxiesQueryKey,
-  getNodes,
   useGetNodes,
   useModifyCoreConfig,
   CoreResponse,
