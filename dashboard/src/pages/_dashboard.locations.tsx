@@ -49,7 +49,7 @@ export default function LocationsPage() {
   }
   const startMutation = useStartLocations()
   const stopMutation = useStopLocations()
-  const installMutation = useInstallLocations()
+  const installMutation = useInstallTorMl()
   const modifyCore = useModifyCoreConfig()
 
   useEffect(() => {
