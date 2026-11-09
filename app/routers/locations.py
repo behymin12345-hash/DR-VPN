@@ -13,7 +13,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.admin import AdminDetails
-from app.utils import responses
 from app.utils.logger import get_logger
 
 from .authentication import require_permission
@@ -68,7 +67,7 @@ async def _run_tor(args: list[str], timeout: float = 30) -> tuple[bool, str]:
         )
         out, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         return proc.returncode == 0, out.decode(errors="replace")
-    except (FileNotFoundError, asyncio.TimeoutError) as exc:
+    except (TimeoutError, FileNotFoundError) as exc:
         return False, f"{exc.__class__.__name__}: {exc}"
 
 
@@ -114,7 +113,7 @@ async def install_tor_ml(
     )
     try:
         out, _ = await asyncio.wait_for(proc.communicate(), timeout=600)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         await self_report_failure("install timed out after 600s")
         raise HTTPExceptionServiceUnavailable("tor-ml install timed out")
@@ -141,7 +140,7 @@ async def start_locations(
     _: AdminDetails = Depends(require_permission("settings", "update")),
 ):
     for loc_id in body.ids:
-        ok, _ = await _run_tor(["--start", loc_id], timeout=60)
+        _ok, _ = await _run_tor(["--start", loc_id], timeout=60)
     return {"ok": True, "started": body.ids}
 
 
@@ -151,7 +150,7 @@ async def stop_locations(
     _: AdminDetails = Depends(require_permission("settings", "update")),
 ):
     for loc_id in body.ids:
-        ok, _ = await _run_tor(["--stop", loc_id], timeout=30)
+        _ok, _ = await _run_tor(["--stop", loc_id], timeout=30)
     return {"ok": True, "stopped": body.ids}
 
 
@@ -162,11 +161,11 @@ async def ping_location(
 ):
     if not ID_PATTERN.fullmatch(loc_id):
         return {"ok": False, "error": "invalid location id"}
-    ok, out = await _run_tor(["--ping", loc_id], timeout=45)
+    _ok, out = await _run_tor(["--ping", loc_id], timeout=45)
     try:
         return json.loads(out)
     except json.JSONDecodeError:
-        return {"id": loc_id, "ok": ok, "raw": out[:200]}
+        return {"id": loc_id, "ok": _ok, "raw": out[:200]}
 
 
 @router.post("/mode")
