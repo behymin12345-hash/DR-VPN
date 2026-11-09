@@ -29,6 +29,7 @@ import {
   FileCode2,
   FileUser,
   Fingerprint,
+  Globe2,
   Group,
   Key,
   Layers,
@@ -231,6 +232,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: 'Telegram Proxy',
               url: '/proxy',
               icon: Send,
+            },
+          ]
+        : []),
+      ...(canReadProxy
+        ? [
+            {
+              title: 'Locations',
+              url: '/locations',
+              icon: Globe2,
             },
           ]
         : []),

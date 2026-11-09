@@ -19,6 +19,7 @@ const AdminsPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.admin
 const AdminRolesPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.admin-roles'))
 const ApiKeysPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.api-keys'))
 const ProxyPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.proxy'))
+const LocationsPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.locations'))
 const BulkPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.bulk'))
 const BulkCreatePage = lazyWithChunkRecovery(() => import('../pages/_dashboard.bulk.create'))
 const BulkDataPage = lazyWithChunkRecovery(() => import('../pages/_dashboard.bulk.data'))
@@ -142,6 +143,14 @@ export const router = createHashRouter([
         element: (
           <Suspense fallback={<LoadingSpinner />}>
             <ProxyPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/locations',
+        element: (
+          <Suspense fallback={<LoadingSpinner />}>
+            <LocationsPage />
           </Suspense>
         ),
       },

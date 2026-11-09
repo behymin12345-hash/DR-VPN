@@ -1,0 +1,247 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Globe2, MapPin, Shuffle } from 'lucide-react'
+import { toast } from 'sonner'
+
+import PageHeader from '@/components/layout/page-header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import {
+  getCoreConfig,
+  getGetMtprotoProxiesQueryKey,
+  getNodes,
+  useGetNodes,
+  useModifyCoreConfig,
+  CoreResponse,
+} from '@/service/api'
+import { BALANCER_PORT, LOCATIONS, OUTBOUND_PREFIX } from '@/constants/locations'
+
+type Binding = Record<string, string> // inboundTag -> location value ('' | 'balancer' | 'T01' | 'P05' ...)
+
+const INSTALL_CMD = 'sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/mrmarzx/Tor-ML-PRO/4.4/tor-ml.sh | tr -d \'\\r\')" -- --install'
+
+const valueToOutbound = (value: string): { tag: string; port: number } | null => {
+  if (!value) return null
+  if (value === 'balancer') return { tag: `${OUTBOUND_PREFIX}auto`, port: BALANCER_PORT }
+  const loc = LOCATIONS.find(l => l.id === value)
+  return loc ? { tag: `${OUTBOUND_PREFIX}${loc.cc}-${loc.id}`, port: loc.port } : null
+}
+
+export default function LocationsPage() {
+  const { data: nodesResp } = useGetNodes()
+  const nodes = useMemo(() => nodesResp?.nodes ?? [], [nodesResp])
+  const [nodeId, setNodeId] = useState<number | null>(null)
+  const [core, setCore] = useState<CoreResponse | null>(null)
+  const [binding, setBinding] = useState<Binding>({})
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const modifyCore = useModifyCoreConfig()
+
+  useEffect(() => {
+    if (nodeId === null && nodes.length > 0) setNodeId(nodes[0].id)
+  }, [nodes, nodeId])
+
+  const loadCore = async (nid: number) => {
+    const node = nodes.find(n => n.id === nid)
+    if (!node?.core_config_id) {
+      toast.error('This node has no core config')
+      return
+    }
+    setLoading(true)
+    try {
+      const fetched = await getCoreConfig(node.core_config_id)
+      const cfg = JSON.parse(JSON.stringify(fetched.config ?? {})) as Record<string, any>
+      const outbounds: any[] = (cfg.outbounds ?? []) as any[]
+      const rules: any[] = ((cfg.routing?.rules ?? []) as any[]) ?? []
+
+      const next: Binding = {}
+      const outboundsByValue = new Map<string, string>()
+      for (const ob of outbounds) {
+        const tag = String(ob.tag ?? '')
+        if (!tag.startsWith(OUTBOUND_PREFIX)) continue
+        let value = ''
+        if (tag === OUTBOUND_PREFIX + 'auto') value = 'balancer'
+        else {
+          const port = Number(ob.settings?.servers?.[0]?.port ?? 0)
+          const loc = LOCATIONS.find(l => l.port === port)
+          if (loc) value = loc.id
+        }
+        if (value) {
+          outboundsByValue.set(tag, value)
+          const rule = rules.find(r => String(r.outboundTag ?? '') === tag)
+          if (rule) {
+            const inboundTags: string[] = rule.inboundTag ?? []
+            for (const it of inboundTags) next[it] = value
+          }
+        }
+      }
+      setBinding(next)
+      setCore({ ...fetched, config: cfg } as CoreResponse)
+    } catch {
+      toast.error('Failed to load the core config')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (nodeId !== null && nodes.length) void loadCore(nodeId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeId])
+
+  const inbounds = useMemo<string[]>(() => ((core?.config?.inbounds as any[] | undefined) ?? []).map(i => String(i.tag ?? '')).filter(Boolean), [core])
+
+  const apply = async () => {
+    if (!core) return
+    setSaving(true)
+    try {
+      const config = JSON.parse(JSON.stringify(core.config)) as Record<string, any>
+      config.outbounds = (config.outbounds ?? []).filter(
+        (o: any) => !String(o.tag ?? '').startsWith(OUTBOUND_PREFIX),
+      )
+      config.routing = config.routing ?? { rules: [] }
+      config.routing.rules = (config.routing.rules ?? []).filter(
+        (r: any) => !String(r.outboundTag ?? '').startsWith(OUTBOUND_PREFIX),
+      )
+
+      const usedValues = new Set<string>()
+      for (const tag of inbounds) {
+        const v = binding[tag]
+        if (v) usedValues.add(v)
+      }
+      const outboundsByValue = new Map<string, string>()
+      for (const v of usedValues) {
+        const ob = valueToOutbound(v)
+        if (!ob) continue
+        outboundsByValue.set(v, ob.tag)
+        config.outbounds.push({
+          tag: ob.tag,
+          protocol: 'socks',
+          settings: { servers: [{ address: '127.0.0.1', port: ob.port }] },
+        })
+      }
+      for (const tag of inbounds) {
+        const v = binding[tag]
+        if (!v) continue
+        config.routing.rules.push({
+          type: 'field',
+          inboundTag: [tag],
+          outboundTag: outboundsByValue.get(v),
+          network: 'tcp,udp',
+        })
+      }
+
+      await modifyCore.mutateAsync({
+        coreId: core.id,
+        data: {
+          name: core.name,
+          config,
+          type: core.type ?? 'xray',
+          exclude_inbound_tags: core.exclude_inbound_tags ?? [],
+          fallbacks_inbound_tags: core.fallbacks_inbound_tags ?? [],
+        },
+        params: { restart_nodes: true },
+      })
+      toast.success('Locations applied — node is restarting with the new routing')
+      await loadCore(nodeId!)
+    } catch {
+      toast.error('Failed to apply — check that the locations are running on the node server')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const grouped = useMemo(() => ({
+    tor: LOCATIONS.filter(l => l.type === 'tor'),
+    psiphon: LOCATIONS.filter(l => l.type === 'psiphon'),
+  }), [])
+
+  return (
+    <div className="w-full flex-col p-4">
+      <PageHeader
+        title="Locations"
+        description="Route any inbound through a Tor/Psiphon exit country (tor-ml) — users keep the same link, the exit IP changes"
+      />
+      <Separator className="mb-4" />
+
+      <Card className="mb-4">
+        <CardContent className="flex flex-col gap-3 p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-56 flex-1">
+              <Label>Node</Label>
+              <select
+                className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+                value={nodeId ?? ''}
+                onChange={e => setNodeId(Number(e.target.value))}
+              >
+                {nodes.map(n => (
+                  <option key={n.id} value={n.id}>{n.name}</option>
+                ))}
+              </select>
+            </div>
+            <Button onClick={apply} disabled={saving || loading || !core || !nodeId}>
+              <MapPin className="mr-1 h-4 w-4" />
+              {saving ? 'Applying…' : 'Apply & Restart Node'}
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            tor-ml must be installed on the node server itself (one command). Install on the node, then start the
+            locations you want (<code>tor --start-all-tor</code> or per-location), then bind them here.
+          </p>
+        </CardContent>
+      </Card>
+
+      {loading && <p className="text-muted-foreground p-4 text-sm">Loading core config…</p>}
+
+      {!!inbounds.length && !loading && (
+        <div className="flex flex-col gap-3">
+          {inbounds.map(tag => (
+            <Card key={tag}>
+              <CardContent className="flex flex-wrap items-center gap-3 p-4">
+                <div className="min-w-40 flex-1">
+                  <span className="font-medium">{tag}</span>
+                  <p className="text-muted-foreground text-xs">inbound</p>
+                </div>
+                <div className="min-w-64 flex-1">
+                  <select
+                    className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+                    value={binding[tag] ?? ''}
+                    onChange={e => setBinding(b => ({ ...b, [tag]: e.target.value }))}
+                  >
+                    <option value="">Direct (no location)</option>
+                    <option value="balancer">⚡ Auto Balancer (best ping)</option>
+                    <optgroup label="Tor (60)">
+                      {grouped.tor.map(l => (
+                        <option key={l.id} value={l.id}>{l.cc} — {l.name} (:{l.port})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Psiphon (28)">
+                      {grouped.psiphon.map(l => (
+                        <option key={l.id} value={l.id}>{l.cc} — {l.name} (:{l.port})</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Card className="mt-4">
+        <CardContent className="p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Globe2 className="h-4 w-4" />
+            <span className="font-medium">Install tor-ml on a node server (once)</span>
+          </div>
+          <pre dir="ltr" className="bg-muted overflow-x-auto rounded p-3 text-xs">{INSTALL_CMD}</pre>
+          <p className="text-muted-foreground mt-2 text-xs">
+            Then: <code>tor --mode weak</code> (small VPS) and <code>tor --start T01 T03</code> +{' '}
+            <code>tor --balancer-start</code>. 1 GB RAM ≈ max 8 locations; DE/NL/FR/GB have the best ping.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
