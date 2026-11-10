@@ -22,6 +22,7 @@ import {
   MtprotoProxyResponse,
   useCreateMtprotoProxy,
   useGetMtprotoProxies,
+  useGetAllGroups,
   getGetMtprotoProxiesQueryKey,
   useModifyMtprotoProxy,
   useRemoveMtprotoProxy,
