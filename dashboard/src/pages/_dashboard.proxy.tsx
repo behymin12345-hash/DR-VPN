@@ -51,6 +51,7 @@ interface ProxyFormValue {
   sponsoredChannel: string
   tag: string
   nodeId: string
+  groupId: string
 }
 
 const emptyForm: ProxyFormValue = {
@@ -62,10 +63,13 @@ const emptyForm: ProxyFormValue = {
   sponsoredChannel: '',
   tag: '',
   nodeId: '',
+  groupId: '',
 }
 
 export default function ProxyPage() {
   const { data: proxies = [], isLoading } = useGetMtprotoProxies()
+  const { data: groupsResp } = useGetAllGroups()
+  const groups = groupsResp?.groups ?? []
   const { data: nodesResp } = useGetNodes()
   const nodes = nodesResp?.nodes ?? []
   const queryClient = useQueryClient()
@@ -100,6 +104,7 @@ export default function ProxyPage() {
       sponsoredChannel: proxy.sponsored_channel ?? '',
       tag: proxy.tag ?? '',
       nodeId: proxy.node_id ? String(proxy.node_id) : '',
+      groupId: proxy.group_id ? String(proxy.group_id) : '',
     })
     setDialogOpen(true)
   }
@@ -323,6 +328,21 @@ export default function ProxyPage() {
                   placeholder="16 hex chars"
                 />
               </div>
+            </div>
+            <div className="grid gap-1">
+              <Label>Visible to group (optional — only users of this group see this proxy)</Label>
+              <select
+                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+                value={form.groupId}
+                onChange={(e) => setForm({ ...form, groupId: e.target.value })}
+              >
+                <option value="">— all users —</option>
+                {groups.map((g: { id: number; name: string }) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-1">
               <Label>Node server hosting this proxy (optional)</Label>
