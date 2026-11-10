@@ -101,3 +101,7 @@ export const LOCATIONS: LocationEntry[] = [
 
 export const BALANCER_PORT = 49000
 export const OUTBOUND_PREFIX = 'tor-ml-'
+
+// Country flag emoji from the 2-letter ISO code (regional indicator symbols)
+export const ccFlag = (cc: string): string =>
+  String.fromCodePoint(...[...cc.toUpperCase()].map(c => 127397 + c.charCodeAt(0)))

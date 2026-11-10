@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Globe2, MapPin } from 'lucide-react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { Globe2, MapPin, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import PageHeader from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -18,7 +19,8 @@ import {
   pingLocation,
   CoreResponse,
 } from '@/service/api'
-import { BALANCER_PORT, LOCATIONS, OUTBOUND_PREFIX } from '@/constants/locations'
+import { BALANCER_PORT, LOCATIONS, ccFlag, OUTBOUND_PREFIX } from '@/constants/locations'
+import { cn } from '@/lib/utils'
 
 type Binding = Record<string, string> // inboundTag -> location value ('' | 'balancer' | 'T01' | 'P05' ...)
 
@@ -41,6 +43,7 @@ export default function LocationsPage() {
   const [saving, setSaving] = useState(false)
   const [pinging, setPinging] = useState<string | null>(null)
   const [pingResults, setPingResults] = useState<Record<string, { ok: boolean; latency?: number; ip?: string }>>({})
+  const [search, setSearch] = useState('')
   const statusQuery = useLocationsStatus()
   const status = (statusQuery.data ?? {}) as {
     installed?: boolean
@@ -209,6 +212,17 @@ export default function LocationsPage() {
     psiphon: LOCATIONS.filter(l => l.type === 'psiphon'),
   }), [])
 
+  const sortedLocations = useMemo(() => {
+    const order = { tor: 0, psiphon: 1 }
+    return [...LOCATIONS].sort((a, b) => {
+      const ra = runningById.get(a.id) ? 0 : 1
+      const rb = runningById.get(b.id) ? 0 : 1
+      if (ra !== rb) return ra - rb
+      if (order[a.type] !== order[b.type]) return order[a.type] - order[b.type]
+      return a.cc.localeCompare(b.cc)
+    })
+  }, [runningById])
+
   return (
     <div className="w-full flex-col p-4">
       <PageHeader
@@ -263,44 +277,70 @@ export default function LocationsPage() {
           </div>
 
           {status.installed && (
-            <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {LOCATIONS.map(l => {
-                const running = runningById.get(l.id) ?? false
-                const pr = pingResults[l.id]
-                return (
-                  <div key={l.id} className="border-input flex items-center justify-between gap-2 rounded-md border p-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className={running ? 'h-2 w-2 shrink-0 rounded-full bg-green-500' : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'} />
-                      <span className="truncate text-sm">{l.cc} — {l.name}</span>
-                      <span className="text-muted-foreground text-[10px]">:{l.port}</span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {pr && (
-                        <span className={pr.ok ? 'text-xs text-green-600' : 'text-xs text-red-500'}>
-                          {pr.ok ? `${Math.round((pr.latency ?? 0) * 1000)}ms` : 'fail'}
-                        </span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        disabled={pinging === l.id}
-                        onClick={() => doPing(l.id)}
-                      >
-                        ping
-                      </Button>
-                      <Button
-                        variant={running ? 'outline' : 'default'}
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => toggleLocation(l.id, running)}
-                      >
-                        {running ? 'Stop' : 'Start'}
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search location / country…"
+                  value={search}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {sortedLocations
+                  .filter(l => {
+                    const q = search.trim().toLowerCase()
+                    return !q || l.name.toLowerCase().includes(q) || l.cc.toLowerCase().includes(q) || l.id.toLowerCase().includes(q) || (l.type === 'tor' && 'tor'.includes(q)) || (l.type === 'psiphon' && 'psiphon'.includes(q))
+                  })
+                  .map(l => {
+                    const running = runningById.get(l.id) ?? false
+                    const pr = pingResults[l.id]
+                    return (
+                      <div key={l.id} className="border-input flex items-center justify-between gap-2 rounded-md border p-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={running ? 'h-2 w-2 shrink-0 rounded-full bg-green-500' : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'} />
+                          <span className="shrink-0 text-base leading-none">{ccFlag(l.cc)}</span>
+                          <span className="truncate text-sm">{l.cc} — {l.name}</span>
+                          <span className={cn('shrink-0 rounded px-1 py-0.5 text-[10px]', l.type === 'tor' ? 'bg-purple-500/15 text-purple-500' : 'bg-sky-500/15 text-sky-500')}>
+                            {l.type === 'tor' ? 'Tor' : 'Psiphon'}
+                          </span>
+                          <span className="text-muted-foreground text-[10px]">:{l.port}</span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {pr && (
+                            <span className={pr.ok ? 'text-xs text-green-600' : 'text-xs text-red-500'}>
+                              {pr.ok ? `${Math.round((pr.latency ?? 0) * 1000)}ms` : 'fail'}
+                            </span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={pinging === l.id}
+                            onClick={() => doPing(l.id)}
+                          >
+                            ping
+                          </Button>
+                          <Button
+                            variant={running ? 'outline' : 'default'}
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => toggleLocation(l.id, running)}
+                          >
+                            {running ? 'Stop' : 'Start'}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+              {sortedLocations.filter(l => {
+                const q = search.trim().toLowerCase()
+                return q && !(l.name.toLowerCase().includes(q) || l.cc.toLowerCase().includes(q) || l.id.toLowerCase().includes(q))
+              }).length > 0 && (
+                <p className="text-muted-foreground text-center text-xs">No location matches your search</p>
+              )}
             </div>
           )}
         </CardContent>
@@ -324,13 +364,13 @@ export default function LocationsPage() {
                     <option value="">Direct (no location)</option>
                     <option value="balancer">⚡ Auto Balancer (best ping)</option>
                     <optgroup label="Tor (60)">
-                      {grouped.tor.map(l => (
-                        <option key={l.id} value={l.id}>{l.cc} — {l.name} (:{l.port})</option>
+                      {(grouped.tor as { id: string; cc: string; name: string; port: number }[]).map((l: { id: string; cc: string; name: string; port: number }) => (
+                        <option key={l.id} value={l.id}>{ccFlag(l.cc)} {l.cc} — {l.name} (:{l.port})</option>
                       ))}
                     </optgroup>
                     <optgroup label="Psiphon (28)">
-                      {grouped.psiphon.map(l => (
-                        <option key={l.id} value={l.id}>{l.cc} — {l.name} (:{l.port})</option>
+                      {(grouped.psiphon as { id: string; cc: string; name: string; port: number }[]).map((l: { id: string; cc: string; name: string; port: number }) => (
+                        <option key={l.id} value={l.id}>{ccFlag(l.cc)} {l.cc} — {l.name} (:{l.port})</option>
                       ))}
                     </optgroup>
                   </select>
