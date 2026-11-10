@@ -109,7 +109,7 @@ def test_admin_ownership_scoping(access_token):
         headers=_auth(access_token),
         json={
             "name": f"proxy-reseller-{uuid.uuid4().hex[:6]}",
-            "permissions": {"settings": {"read": True, "update": True}},
+            "permissions": {"mtproto": {"read": True, "create": True, "update": True, "delete": True}},
         },
     )
     assert role_res.status_code == status.HTTP_201_CREATED, role_res.text
