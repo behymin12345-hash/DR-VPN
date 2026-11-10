@@ -31,6 +31,15 @@ async def get_enabled_mtproto_proxies(db: AsyncSession) -> list[MtprotoProxy]:
         return []
 
 
+async def get_enabled_mtproto_proxies_for_user(
+    db: AsyncSession, user_id: int, user_group_ids: set[int]
+) -> list[MtprotoProxy]:
+    """Enabled proxies visible to this user: global ones (no group binding)
+    plus proxies bound to one of the user's groups."""
+    proxies = await get_enabled_mtproto_proxies(db)
+    return [p for p in proxies if p.group_id is None or p.group_id in user_group_ids]
+
+
 async def create_mtproto_proxy(db: AsyncSession, data: MtprotoProxyCreate) -> MtprotoProxy:
     proxy = MtprotoProxy(**data.model_dump())
     db.add(proxy)

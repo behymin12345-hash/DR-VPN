@@ -1125,5 +1125,6 @@ class MtprotoProxy(Base, CreatedAtUTCMixin):
     enabled: Mapped[bool] = mapped_column(default=True)
     admin_id: Mapped[int | None] = fk_id_column("admins.id", ondelete="CASCADE", default=None)
     node_id: Mapped[int | None] = fk_id_column("nodes.id", ondelete="SET NULL", default=None)
+    group_id: Mapped[int | None] = fk_id_column("groups.id", ondelete="CASCADE", default=None)
     sponsored_channel: Mapped[str | None] = mapped_column(String(255), default=None)
     tag: Mapped[str | None] = mapped_column(String(64), default=None)

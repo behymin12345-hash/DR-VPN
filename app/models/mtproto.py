@@ -12,6 +12,7 @@ class MtprotoProxyBase(BaseModel):
     sponsored_channel: str | None = Field(default=None, max_length=255)
     tag: str | None = Field(default=None, max_length=64)
     node_id: int | None = Field(default=None)
+    group_id: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "server", "secret")
     @classmethod
@@ -56,4 +57,5 @@ class MtprotoProxyResponse(MtprotoProxyBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    group_id: int | None = None
     admin_id: int | None = None

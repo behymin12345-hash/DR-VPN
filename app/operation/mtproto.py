@@ -11,6 +11,7 @@ from app.db.crud.mtproto import (
     remove_mtproto_proxy,
 )
 from app.db.models import Admin, MtprotoProxy
+from app.operation.permissions import get_allowed_group_ids
 from app.models.admin import AdminDetails
 from app.models.mtproto import MtprotoProxyCreate, MtprotoProxyModify, MtprotoProxyResponse
 from app.operation import BaseOperation, OperatorType
@@ -34,6 +35,11 @@ class MtprotoProxyOperation(BaseOperation):
         if not admin.is_owner:
             # regular admins always own the proxies they create
             data.admin_id = admin.id
+            if data.group_id is None:
+                # default their proxies to their first allowed group, if any
+                allowed = get_allowed_group_ids(admin)
+                if allowed:
+                    data.group_id = allowed[0]
         elif data.admin_id and not await self._admin_exists(db, data.admin_id):
             await self.raise_error("Admin not found", status.HTTP_404_NOT_FOUND, db)
         try:

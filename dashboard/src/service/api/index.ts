@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.6
+ * OpenAPI spec version: 0.1.9
  */
 import {
   useMutation,
@@ -169,6 +169,28 @@ export interface SettingsPermissions {
   update?: SettingsPermissionsUpdate;
 }
 
+export type MtprotoPermissionsCreate = boolean | {[key: string]: PermissionScope | number} | null;
+
+export type MtprotoPermissionsRead = boolean | {[key: string]: PermissionScope | number} | null;
+
+export type MtprotoPermissionsReadSimple = boolean | {[key: string]: PermissionScope | number} | null;
+
+export type MtprotoPermissionsUpdate = boolean | {[key: string]: PermissionScope | number} | null;
+
+export type MtprotoPermissionsDelete = boolean | {[key: string]: PermissionScope | number} | null;
+
+/**
+ * Telegram MTProto proxies — independent from panel settings so a
+ * 'proxy-only' role can manage proxies without seeing Locations/Settings.
+ */
+export interface MtprotoPermissions {
+  create?: MtprotoPermissionsCreate;
+  read?: MtprotoPermissionsRead;
+  read_simple?: MtprotoPermissionsReadSimple;
+  update?: MtprotoPermissionsUpdate;
+  delete?: MtprotoPermissionsDelete;
+}
+
 export type SystemPermissionsRead = boolean | {[key: string]: PermissionScope | number} | null;
 
 export interface SystemPermissions {
@@ -214,6 +236,7 @@ export interface RolePermissions {
   client_templates?: CRUDPermissions | null;
   cores?: CRUDPermissions | null;
   settings?: SettingsPermissions | null;
+  mtproto?: MtprotoPermissions | null;
   system?: SystemPermissions | null;
   hwids?: HwidsPermissions | null;
   admin_roles?: CRUDPermissions | null;
@@ -1827,6 +1850,7 @@ export interface MtprotoProxyCreate {
   sponsored_channel?: string | null;
   tag?: string | null;
   node_id?: number | null;
+  group_id?: number | null;
   admin_id?: number | null;
 }
 
@@ -1846,6 +1870,7 @@ export interface MtprotoProxyModify {
   sponsored_channel?: string | null;
   tag?: string | null;
   node_id?: number | null;
+  group_id?: number | null;
 }
 
 export interface MtprotoProxyResponse {
@@ -1864,6 +1889,7 @@ export interface MtprotoProxyResponse {
   sponsored_channel?: string | null;
   tag?: string | null;
   node_id?: number | null;
+  group_id?: number | null;
   id: number;
   admin_id?: number | null;
 }

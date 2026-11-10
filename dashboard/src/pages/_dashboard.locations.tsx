@@ -17,6 +17,7 @@ import {
   useStopLocations,
   useInstallTorMl,
   pingLocation,
+  useGetAllGroups,
   CoreResponse,
 } from '@/service/api'
 import { BALANCER_PORT, LOCATIONS, ccFlag, OUTBOUND_PREFIX } from '@/constants/locations'
@@ -35,6 +36,7 @@ const valueToOutbound = (value: string): { tag: string; port: number } | null =>
 
 export default function LocationsPage() {
   const { data: nodesResp } = useGetNodes()
+  const { data: groupsResp } = useGetAllGroups()
   const nodes = useMemo(() => nodesResp?.nodes ?? [], [nodesResp])
   const [nodeId, setNodeId] = useState<number | null>(null)
   const [core, setCore] = useState<CoreResponse | null>(null)

@@ -500,9 +500,28 @@ class SubscriptionOperation(BaseOperation):
             format_variables = await self.get_format_variables(user)
             formatted_announce = self._format_announce(sub_settings, format_variables)
 
-            from app.db.crud.mtproto import get_enabled_mtproto_proxies
+            from sqlalchemy import select as _select
 
-            telegram_proxies = await get_enabled_mtproto_proxies(db)
+            from app.db.crud.mtproto import get_enabled_mtproto_proxies_for_user
+            from app.db.models import Group as _Group
+
+            user_group_rows = (
+                await db.execute(
+                    _select(_Group.id).join(
+                        _Group.__table__.c if False else _Group.users,  # type: ignore[attr-defined]
+                    )
+                )
+            )
+            # simpler: select group ids mapped to this user via the association table
+            from app.db.models import users_groups_association as _uga
+
+            user_group_rows = (
+                await db.execute(
+                    _select(_uga.c.groups_id).where(_uga.c.user_id == db_user.id)
+                )
+            ).fetchall()
+            user_group_ids = {row[0] for row in user_group_rows}
+            telegram_proxies = await get_enabled_mtproto_proxies_for_user(db, db_user.id, user_group_ids)
             return HTMLResponse(
                 render_template(
                     template,
