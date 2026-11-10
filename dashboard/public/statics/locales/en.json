@@ -973,7 +973,14 @@
     },
     "disabled": "Disabled"
   },
-  "apiKeys": {
+    "mtproto": {
+    "title": "Telegram Proxy",
+    "create": "Create Proxy",
+    "update": "Edit Proxy",
+    "delete": "Delete Proxy",
+    "read": "View Proxies"
+  },
+"apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for programmatic access",
     "createKey": "Create API Key",

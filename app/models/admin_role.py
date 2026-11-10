@@ -81,6 +81,11 @@ class HostsPermissions(_ResourcePermissions):
     update: RoleActionValue | None = None
 
 
+class MtprotoPermissions(CRUDPermissions):
+    """Telegram MTProto proxies — independent from panel settings so a
+    'proxy-only' role can manage proxies without seeing Locations/Settings."""
+
+
 class SettingsPermissions(_ResourcePermissions):
     read: RoleActionValue | None = None
     read_general: RoleActionValue | None = None
@@ -140,6 +145,7 @@ class RolePermissions(BaseModel):
     client_templates: CRUDPermissions | None = None
     cores: CRUDPermissions | None = None
     settings: SettingsPermissions | None = None
+    mtproto: MtprotoPermissions | None = None
     system: SystemPermissions | None = None
     hwids: HwidsPermissions | None = None
     admin_roles: CRUDPermissions | None = None

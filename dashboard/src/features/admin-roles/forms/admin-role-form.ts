@@ -59,6 +59,15 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    labelKey: 'mtproto.title',
+    actions: [
+      { resource: 'mtproto', action: 'read' },
+      { resource: 'mtproto', action: 'create' },
+      { resource: 'mtproto', action: 'update' },
+      { resource: 'mtproto', action: 'delete' },
+    ],
+  },
+  {
     labelKey: 'apiKeys',
     actions: [
       { resource: 'api_keys', action: 'read', scoped: true },

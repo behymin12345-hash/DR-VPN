@@ -24,7 +24,7 @@ mtproto_operator = mtproto_proxy_operator
 @router.get("", response_model=list[MtprotoProxyResponse])
 async def get_mtproto_proxies(
     db: AsyncSession = Depends(get_db),
-    admin: AdminDetails = Depends(require_permission("settings", "read")),
+    admin: AdminDetails = Depends(require_permission("mtproto", "read")),
 ):
     return await mtproto_operator.get_mtproto_proxies(db, admin)
 
@@ -33,7 +33,7 @@ async def get_mtproto_proxies(
 async def create_mtproto_proxy(
     new_proxy: MtprotoProxyCreate,
     db: AsyncSession = Depends(get_db),
-    admin: AdminDetails = Depends(require_permission("settings", "update")),
+    admin: AdminDetails = Depends(require_permission("mtproto", "create")),
 ):
     return await mtproto_operator.create_mtproto_proxy(db, new_proxy, admin)
 
@@ -43,7 +43,7 @@ async def modify_mtproto_proxy(
     proxy_id: int,
     modified: MtprotoProxyModify,
     db: AsyncSession = Depends(get_db),
-    admin: AdminDetails = Depends(require_permission("settings", "update")),
+    admin: AdminDetails = Depends(require_permission("mtproto", "update")),
 ):
     return await mtproto_operator.modify_mtproto_proxy(db, proxy_id, modified, admin)
 
@@ -52,6 +52,6 @@ async def modify_mtproto_proxy(
 async def remove_mtproto_proxy(
     proxy_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: AdminDetails = Depends(require_permission("settings", "update")),
+    admin: AdminDetails = Depends(require_permission("mtproto", "delete")),
 ):
     return await mtproto_operator.remove_mtproto_proxy(db, proxy_id, admin)
