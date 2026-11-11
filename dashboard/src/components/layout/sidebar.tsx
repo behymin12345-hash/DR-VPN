@@ -230,7 +230,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       ...(canReadTelegramProxy
         ? [
             {
-              title: 'Telegram Proxy',
+              title: 'Proxy Workspace',
               url: '/proxy',
               icon: Send,
             },

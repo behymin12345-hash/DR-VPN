@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.9
+ * OpenAPI spec version: 0.1.10
  */
 import {
   useMutation,
@@ -2217,6 +2217,24 @@ export interface PasskeyRegistrationRequest {
   credential: PasskeyRegistrationRequestCredential;
   /** @maxLength 128 */
   name?: string;
+}
+
+export interface ProxyClientCreate {
+  username: string;
+  group_ids?: number[] | null;
+  data_limit?: number | null;
+  expire?: number | null;
+  usage_coefficient?: number | null;
+  note?: string | null;
+}
+
+export interface ProxyClientModify {
+  group_ids?: number[] | null;
+  data_limit?: number | null;
+  expire?: number | null;
+  usage_coefficient?: number | null;
+  note?: string | null;
+  status?: string | null;
 }
 
 export interface VMessSettings {
@@ -11306,6 +11324,322 @@ export const useRemoveMtprotoProxy = <TError = ErrorType<Unauthorized | Forbidde
         TContext
       > => {
       return useMutation(getRemoveMtprotoProxyMutationOptions(options), queryClient);
+    }
+
+export const getGetProxyClientsUrl = () => {
+
+
+
+
+  return `/api/mtproto_proxy/clients`
+}
+
+/**
+ * Users that belong exclusively to proxy groups (the proxy workspace roster).
+ * @summary Get Proxy Clients
+ */
+export const getProxyClients = async ( options?: RequestInit): Promise<UsersResponse> => {
+
+  return orvalFetcher<UsersResponse>(getGetProxyClientsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProxyClientsQueryKey = () => {
+    return [
+    `/api/mtproto_proxy/clients`
+    ] as const;
+    }
+
+
+export const getGetProxyClientsQueryOptions = <TData = Awaited<ReturnType<typeof getProxyClients>>, TError = ErrorType<Unauthorized | Forbidden>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProxyClientsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProxyClients>>> = ({ signal }) => getProxyClients({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetProxyClientsQueryResult = NonNullable<Awaited<ReturnType<typeof getProxyClients>>>
+export type GetProxyClientsQueryError = ErrorType<Unauthorized | Forbidden>
+
+
+export function useGetProxyClients<TData = Awaited<ReturnType<typeof getProxyClients>>, TError = ErrorType<Unauthorized | Forbidden>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProxyClients>>,
+          TError,
+          Awaited<ReturnType<typeof getProxyClients>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProxyClients<TData = Awaited<ReturnType<typeof getProxyClients>>, TError = ErrorType<Unauthorized | Forbidden>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProxyClients>>,
+          TError,
+          Awaited<ReturnType<typeof getProxyClients>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProxyClients<TData = Awaited<ReturnType<typeof getProxyClients>>, TError = ErrorType<Unauthorized | Forbidden>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Proxy Clients
+ */
+
+export function useGetProxyClients<TData = Awaited<ReturnType<typeof getProxyClients>>, TError = ErrorType<Unauthorized | Forbidden>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProxyClients>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProxyClientsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateProxyClientUrl = () => {
+
+
+
+
+  return `/api/mtproto_proxy/clients`
+}
+
+/**
+ * @summary Create Proxy Client
+ */
+export const createProxyClient = async (proxyClientCreate: ProxyClientCreate, options?: RequestInit): Promise<UserResponse> => {
+
+  return orvalFetcher<UserResponse>(getCreateProxyClientUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(proxyClientCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateProxyClientMutationOptions = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProxyClient>>, TError,{data: BodyType<ProxyClientCreate>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProxyClient>>, TError,{data: BodyType<ProxyClientCreate>}, TContext> => {
+
+const mutationKey = ['createProxyClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProxyClient>>, {data: BodyType<ProxyClientCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProxyClient(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProxyClientMutationResult = NonNullable<Awaited<ReturnType<typeof createProxyClient>>>
+    export type CreateProxyClientMutationBody = BodyType<ProxyClientCreate>
+    export type CreateProxyClientMutationError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>
+
+    /**
+ * @summary Create Proxy Client
+ */
+export const useCreateProxyClient = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProxyClient>>, TError,{data: BodyType<ProxyClientCreate>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createProxyClient>>,
+        TError,
+        {data: BodyType<ProxyClientCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateProxyClientMutationOptions(options), queryClient);
+    }
+
+export const getModifyProxyClientUrl = (username: string,) => {
+
+
+
+
+  return `/api/mtproto_proxy/clients/${username}`
+}
+
+/**
+ * @summary Modify Proxy Client
+ */
+export const modifyProxyClient = async (username: string,
+    proxyClientModify: ProxyClientModify, options?: RequestInit): Promise<UserResponse> => {
+
+  return orvalFetcher<UserResponse>(getModifyProxyClientUrl(username),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(proxyClientModify)
+  }
+);}
+
+
+
+
+
+export const getModifyProxyClientMutationOptions = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof modifyProxyClient>>, TError,{username: string;data: BodyType<ProxyClientModify>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof modifyProxyClient>>, TError,{username: string;data: BodyType<ProxyClientModify>}, TContext> => {
+
+const mutationKey = ['modifyProxyClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof modifyProxyClient>>, {username: string;data: BodyType<ProxyClientModify>}> = (props) => {
+          const {username,data} = props ?? {};
+
+          return  modifyProxyClient(username,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ModifyProxyClientMutationResult = NonNullable<Awaited<ReturnType<typeof modifyProxyClient>>>
+    export type ModifyProxyClientMutationBody = BodyType<ProxyClientModify>
+    export type ModifyProxyClientMutationError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>
+
+    /**
+ * @summary Modify Proxy Client
+ */
+export const useModifyProxyClient = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof modifyProxyClient>>, TError,{username: string;data: BodyType<ProxyClientModify>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof modifyProxyClient>>,
+        TError,
+        {username: string;data: BodyType<ProxyClientModify>},
+        TContext
+      > => {
+      return useMutation(getModifyProxyClientMutationOptions(options), queryClient);
+    }
+
+export const getRemoveProxyClientUrl = (username: string,) => {
+
+
+
+
+  return `/api/mtproto_proxy/clients/${username}`
+}
+
+/**
+ * @summary Remove Proxy Client
+ */
+export const removeProxyClient = async (username: string, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getRemoveProxyClientUrl(username),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveProxyClientMutationOptions = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeProxyClient>>, TError,{username: string}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeProxyClient>>, TError,{username: string}, TContext> => {
+
+const mutationKey = ['removeProxyClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeProxyClient>>, {username: string}> = (props) => {
+          const {username} = props ?? {};
+
+          return  removeProxyClient(username,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveProxyClientMutationResult = NonNullable<Awaited<ReturnType<typeof removeProxyClient>>>
+
+    export type RemoveProxyClientMutationError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>
+
+    /**
+ * @summary Remove Proxy Client
+ */
+export const useRemoveProxyClient = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeProxyClient>>, TError,{username: string}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeProxyClient>>,
+        TError,
+        {username: string},
+        TContext
+      > => {
+      return useMutation(getRemoveProxyClientMutationOptions(options), queryClient);
     }
 
 export const getLocationsStatusUrl = () => {

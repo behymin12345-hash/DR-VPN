@@ -11,10 +11,10 @@ from app.db.crud.mtproto import (
     remove_mtproto_proxy,
 )
 from app.db.models import Admin, MtprotoProxy
-from app.operation.permissions import get_allowed_group_ids
 from app.models.admin import AdminDetails
 from app.models.mtproto import MtprotoProxyCreate, MtprotoProxyModify, MtprotoProxyResponse
 from app.operation import BaseOperation, OperatorType
+from app.operation.permissions import get_allowed_group_ids
 
 
 class MtprotoProxyOperation(BaseOperation):

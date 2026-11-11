@@ -1,10 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Copy, Pencil, QrCode, RefreshCcw, Trash2 } from 'lucide-react'
+import {
+  Ban,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Pencil,
+  QrCode,
+  RefreshCcw,
+  Trash2,
+  UserPlus,
+} from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { toast } from 'sonner'
 
 import PageHeader from '@/components/layout/page-header'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -16,19 +27,33 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   MtprotoProxyResponse,
+  ProxyClientCreate,
+  ProxyClientModify,
+  UserListItem,
   useCreateMtprotoProxy,
+  useCreateProxyClient,
   useGetMtprotoProxies,
+  useGetProxyClients,
   useGetAllGroups,
   getGetMtprotoProxiesQueryKey,
+  getGetProxyClientsQueryKey,
   useModifyMtprotoProxy,
+  useModifyProxyClient,
   useRemoveMtprotoProxy,
+  useRemoveProxyClient,
   useGetNodes,
 } from '@/service/api'
 import { useClipboard } from '@/hooks/use-clipboard'
+import { formatBytes } from '@/utils/formatByte'
+
+const GB = 1024 ** 3
+const DAY = 86400
 
 const generateMtprotoSecret = () => {
   const bytes = new Uint8Array(16)
@@ -36,12 +61,29 @@ const generateMtprotoSecret = () => {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
 }
 
-const fullSecret = (p: { secret: string; tag?: string | null }) => 
-  p.tag ? `dd${p.tag}${p.secret}` : p.secret
+const fullSecret = (p: { secret: string; tag?: string | null }) => p.tag ? `dd${p.tag}${p.secret}` : p.secret
 const tgLink = (p: { server: string; port: number; secret: string; tag?: string | null }) =>
   `tg://proxy?server=${p.server}&port=${p.port}&secret=${fullSecret(p)}`
 const httpsLink = (p: { server: string; port: number; secret: string; tag?: string | null }) =>
   `https://t.me/proxy?server=${p.server}&port=${p.port}&secret=${fullSecret(p)}`
+
+const absoluteSubLink = (url?: string | null) =>
+  !url ? '' : url.startsWith('http') ? url : `${window.location.origin}${url}`
+
+const expireDate = (expire?: string | number | null) => {
+  if (expire === null || expire === undefined) return null
+  const ms = typeof expire === 'number' ? expire * 1000 : Date.parse(expire)
+  return Number.isNaN(ms) ? null : ms
+}
+
+const statusColor = (status: string) =>
+  status === 'active'
+    ? 'bg-green-500'
+    : status === 'disabled'
+      ? 'bg-zinc-400'
+      : status === 'on_hold'
+        ? 'bg-blue-400'
+        : 'bg-red-400'
 
 interface ProxyFormValue {
   name: string
@@ -55,7 +97,7 @@ interface ProxyFormValue {
   groupId: string
 }
 
-const emptyForm: ProxyFormValue = {
+const emptyProxyForm: ProxyFormValue = {
   name: '',
   server: '',
   port: '443',
@@ -67,36 +109,88 @@ const emptyForm: ProxyFormValue = {
   groupId: '',
 }
 
+interface ClientFormValue {
+  username: string
+  dataLimitGb: string
+  expireDays: string
+  coefficient: string
+  groupIds: number[]
+}
+
+const emptyClientForm: ClientFormValue = {
+  username: '',
+  dataLimitGb: '',
+  expireDays: '',
+  coefficient: '1',
+  groupIds: [],
+}
+
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="mt-1 text-xl font-semibold">{value}</p>
+        {hint && <p className="text-muted-foreground text-[11px]">{hint}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function ProxyPage() {
-  const { data: proxies = [], isLoading } = useGetMtprotoProxies()
+  const { data: proxies = [], isLoading: proxiesLoading } = useGetMtprotoProxies()
+  const { data: clientsResp, isLoading: clientsLoading } = useGetProxyClients()
   const { data: groupsResp } = useGetAllGroups()
-  const groups = groupsResp?.groups ?? []
   const { data: nodesResp } = useGetNodes()
+  const groups = groupsResp?.groups ?? []
   const nodes = nodesResp?.nodes ?? []
+  // Proxy-only groups: a group with no inbounds carries Telegram proxies instead of configs.
+  const proxyGroups = useMemo(
+    () => groups.filter((g: { id: number; inbound_tags?: string[] | null }) => !g.inbound_tags || g.inbound_tags.length === 0),
+    [groups],
+  )
+  const clients: UserListItem[] = useMemo(() => clientsResp?.users ?? [], [clientsResp])
+  const activeClients = clients.filter((c) => c.status === 'active').length
+  const clientsTraffic = clients.reduce((sum, c) => sum + (c.used_traffic || 0), 0)
+
   const queryClient = useQueryClient()
   const { copy } = useClipboard()
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<MtprotoProxyResponse | null>(null)
-  const [form, setForm] = useState<ProxyFormValue>(emptyForm)
+  const invalidateClients = () => queryClient.invalidateQueries({ queryKey: getGetProxyClientsQueryKey() })
+  const invalidateProxies = () => queryClient.invalidateQueries({ queryKey: getGetMtprotoProxiesQueryKey() })
+
+  // --- proxy state
+  const [proxyDialogOpen, setProxyDialogOpen] = useState(false)
+  const [editingProxy, setEditingProxy] = useState<MtprotoProxyResponse | null>(null)
+  const [proxyForm, setProxyForm] = useState<ProxyFormValue>(emptyProxyForm)
   const [qrLink, setQrLink] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<MtprotoProxyResponse | null>(null)
+  const [deleteProxyTarget, setDeleteProxyTarget] = useState<MtprotoProxyResponse | null>(null)
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetMtprotoProxiesQueryKey() })
+  // --- client state
+  const [clientSearch, setClientSearch] = useState('')
+  const [clientDialogOpen, setClientDialogOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<UserListItem | null>(null)
+  const [clientForm, setClientForm] = useState<ClientFormValue>(emptyClientForm)
+  const [deleteClientTarget, setDeleteClientTarget] = useState<UserListItem | null>(null)
 
-  const createMutation = useCreateMtprotoProxy()
-  const modifyMutation = useModifyMtprotoProxy()
-  const removeMutation = useRemoveMtprotoProxy()
+  const createProxyMutation = useCreateMtprotoProxy()
+  const modifyProxyMutation = useModifyMtprotoProxy()
+  const removeProxyMutation = useRemoveMtprotoProxy()
 
-  const openCreate = () => {
-    setEditing(null)
-    setForm(emptyForm)
-    setDialogOpen(true)
+  const createClientMutation = useCreateProxyClient()
+  const modifyClientMutation = useModifyProxyClient()
+  const removeClientMutation = useRemoveProxyClient()
+
+  // ---------------------------------------------------------------- proxies
+  const openProxyCreate = () => {
+    setEditingProxy(null)
+    setProxyForm(emptyProxyForm)
+    setProxyDialogOpen(true)
   }
 
-  const openEdit = (proxy: MtprotoProxyResponse) => {
-    setEditing(proxy)
-    setForm({
+  const openProxyEdit = (proxy: MtprotoProxyResponse) => {
+    setEditingProxy(proxy)
+    setProxyForm({
       name: proxy.name,
       server: proxy.server,
       port: String(proxy.port),
@@ -107,58 +201,54 @@ export default function ProxyPage() {
       nodeId: proxy.node_id ? String(proxy.node_id) : '',
       groupId: proxy.group_id ? String(proxy.group_id) : '',
     })
-    setDialogOpen(true)
+    setProxyDialogOpen(true)
   }
 
-  const submit = async () => {
+  const submitProxy = async () => {
     const payload = {
-      name: form.name.trim(),
-      server: form.server.trim(),
-      port: Number(form.port),
-      secret: form.secret.trim() || generateMtprotoSecret(),
-      enabled: form.enabled,
-      sponsored_channel: form.sponsoredChannel.trim() || null,
-      tag: form.tag.trim() || null,
-      node_id: form.nodeId ? Number(form.nodeId) : null,
+      name: proxyForm.name.trim(),
+      server: proxyForm.server.trim(),
+      port: Number(proxyForm.port),
+      secret: proxyForm.secret.trim() || generateMtprotoSecret(),
+      enabled: proxyForm.enabled,
+      sponsored_channel: proxyForm.sponsoredChannel.trim() || null,
+      tag: proxyForm.tag.trim() || null,
+      node_id: proxyForm.nodeId ? Number(proxyForm.nodeId) : null,
     }
     if (!payload.name || !payload.server || !payload.port) {
       toast.error('Name, server and port are required')
       return
     }
-    if (!form.secret.trim()) {
-      setForm(f => ({ ...f, secret: payload.secret }))
-      toast.success('Secret was generated automatically — it is now on the card')
-    }
     try {
-      if (editing) {
-        await modifyMutation.mutateAsync({ proxyId: editing.id, data: payload })
+      if (editingProxy) {
+        await modifyProxyMutation.mutateAsync({ proxyId: editingProxy.id, data: payload })
         toast.success('Proxy updated')
       } else {
-        await createMutation.mutateAsync({ data: payload })
+        await createProxyMutation.mutateAsync({ data: payload })
         toast.success('Proxy created')
       }
-      setDialogOpen(false)
-      invalidate()
+      setProxyDialogOpen(false)
+      invalidateProxies()
     } catch {
       toast.error('Failed — the name may already exist')
     }
   }
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return
+  const confirmDeleteProxy = async () => {
+    if (!deleteProxyTarget) return
     try {
-      await removeMutation.mutateAsync({ proxyId: deleteTarget.id })
+      await removeProxyMutation.mutateAsync({ proxyId: deleteProxyTarget.id })
       toast.success('Proxy deleted')
-      setDeleteTarget(null)
-      invalidate()
+      setDeleteProxyTarget(null)
+      invalidateProxies()
     } catch {
       toast.error('Failed to delete')
     }
   }
 
-  const toggleEnabled = async (proxy: MtprotoProxyResponse, enabled: boolean) => {
+  const toggleProxyEnabled = async (proxy: MtprotoProxyResponse, enabled: boolean) => {
     try {
-      await modifyMutation.mutateAsync({
+      await modifyProxyMutation.mutateAsync({
         proxyId: proxy.id,
         data: {
           name: proxy.name,
@@ -171,142 +261,493 @@ export default function ProxyPage() {
           node_id: proxy.node_id ?? null,
         },
       })
-      invalidate()
+      invalidateProxies()
     } catch {
       toast.error('Failed to update')
     }
   }
 
+  // ---------------------------------------------------------------- clients
+  const openClientCreate = () => {
+    setEditingClient(null)
+    setClientForm({
+      ...emptyClientForm,
+      groupIds: proxyGroups[0] ? [proxyGroups[0].id] : [],
+    })
+    setClientDialogOpen(true)
+  }
+
+  const openClientEdit = (client: UserListItem) => {
+    setEditingClient(client)
+    setClientForm({
+      username: client.username,
+      dataLimitGb: client.data_limit ? String(Math.round((client.data_limit / GB) * 100) / 100) : '',
+      expireDays: '',
+      coefficient: client.usage_coefficient ? String(client.usage_coefficient) : '1',
+      groupIds: client.group_ids ?? [],
+    })
+    setClientDialogOpen(true)
+  }
+
+  const submitClient = async () => {
+    const username = clientForm.username.trim()
+    if (!username) {
+      toast.error('Username is required')
+      return
+    }
+    if (clientForm.groupIds.length === 0) {
+      toast.error('Pick at least one proxy group')
+      return
+    }
+    const dataLimit = clientForm.dataLimitGb.trim() ? Math.round(Number(clientForm.dataLimitGb) * GB) : null
+    const expire = clientForm.expireDays.trim()
+      ? Math.floor(Date.now() / 1000) + Number(clientForm.expireDays) * DAY
+      : null
+    const coefficient = clientForm.coefficient.trim() ? Number(clientForm.coefficient) : null
+    if (coefficient !== null && (Number.isNaN(coefficient) || coefficient <= 0)) {
+      toast.error('Usage coefficient must be a positive number')
+      return
+    }
+    try {
+      if (editingClient) {
+        const data: ProxyClientModify = {
+          group_ids: clientForm.groupIds,
+          data_limit: dataLimit,
+          expire,
+          usage_coefficient: coefficient,
+        }
+        await modifyClientMutation.mutateAsync({ username: editingClient.username, data })
+        toast.success('Client updated')
+      } else {
+        const data: ProxyClientCreate = {
+          username,
+          group_ids: clientForm.groupIds,
+          data_limit: dataLimit,
+          expire,
+          usage_coefficient: coefficient,
+        }
+        await createClientMutation.mutateAsync({ data })
+        toast.success(`Client "${username}" created`)
+      }
+      setClientDialogOpen(false)
+      invalidateClients()
+      invalidateProxies()
+    } catch {
+      toast.error('Failed — the username may already exist')
+    }
+  }
+
+  const toggleClientStatus = async (client: UserListItem) => {
+    const status = client.status === 'disabled' ? 'active' : 'disabled'
+    try {
+      await modifyClientMutation.mutateAsync({ username: client.username, data: { status } })
+      toast.success(status === 'active' ? 'Client enabled' : 'Client disabled')
+      invalidateClients()
+    } catch {
+      toast.error('Failed to update')
+    }
+  }
+
+  const confirmDeleteClient = async () => {
+    if (!deleteClientTarget) return
+    try {
+      await removeClientMutation.mutateAsync({ username: deleteClientTarget.username })
+      toast.success('Client deleted')
+      setDeleteClientTarget(null)
+      invalidateClients()
+      invalidateProxies()
+    } catch {
+      toast.error('Failed to delete')
+    }
+  }
+
+  const filteredClients = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase()
+    return q ? clients.filter((c) => c.username.toLowerCase().includes(q)) : clients
+  }, [clients, clientSearch])
+
+  const groupBadge = (ids?: number[] | null) =>
+    (ids ?? [])
+      .map((id) => groups.find((g: { id: number; name: string }) => g.id === id))
+      .filter(Boolean)
+      .map((g) => (g as { name: string }).name)
+
   return (
     <div className="w-full flex-col p-4">
       <PageHeader
-        title="Telegram Proxy"
-        description="Manage MTProto proxies and share them with your users — enabled proxies appear on every user's subscription page"
-        buttonText="Add Proxy"
-        onButtonClick={openCreate}
+        title="Proxy Workspace"
+        description="A fully separate workspace for Telegram proxy clients and MTProto proxies — config users, groups and cores live on the Users/Groups pages"
+        buttonText="Add Client"
+        onButtonClick={openClientCreate}
       />
       <Separator className="mb-4" />
 
-      {isLoading ? (
-        <p className="text-muted-foreground p-4 text-sm">Loading…</p>
-      ) : proxies.length === 0 ? (
-        <Card>
-          <CardContent className="text-muted-foreground p-10 text-center text-sm">
-            No Telegram proxies yet — click "Add Proxy" to create one, then share the link with your users.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {proxies.map((proxy) => (
-            <Card key={proxy.id}>
-              <CardContent className="flex flex-col gap-2 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={
-                        proxy.enabled ? 'h-2 w-2 shrink-0 rounded-full bg-green-500' : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'
-                      }
-                    />
-                    <span className="truncate font-medium">{proxy.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {proxy.server}:{proxy.port}
-                    </span>
-                    {proxy.node_id && (
-                      <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                        node #{proxy.node_id}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleEnabled(proxy, v)} />
-                    <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(proxy)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setQrLink(tgLink(proxy))}>
-                      <QrCode className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(proxy)}>
-                      <Trash2 className="text-destructive h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                {proxy.sponsored_channel && (
-                  <p className="text-muted-foreground truncate text-xs">
-                    Sponsored: {proxy.sponsored_channel}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={async () => {
-                      await copy(tgLink(proxy))
-                      toast.success('tg:// link copied')
-                    }}
-                  >
-                    <Copy className="h-3 w-3" /> tg:// link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={async () => {
-                      await copy(httpsLink(proxy))
-                      toast.success('https link copied')
-                    }}
-                  >
-                    <Copy className="h-3 w-3" /> https link
-                  </Button>
-                </div>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Proxies" value={String(proxies.length)} hint={`${proxies.filter((p) => p.enabled).length} enabled`} />
+        <StatCard label="Clients" value={String(clientsResp?.total ?? clients.length)} hint="proxy groups only" />
+        <StatCard label="Active" value={String(activeClients)} hint="clients online-eligible" />
+        <StatCard label="Client traffic" value={formatBytes(clientsTraffic)} hint="all-time usage" />
+      </div>
+
+      <Tabs defaultValue="clients" className="w-full">
+        <TabsList>
+          <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="proxies">Proxies</TabsTrigger>
+        </TabsList>
+
+        {/* ------------------------------------------------ Clients tab */}
+        <TabsContent value="clients" className="mt-3">
+          <div className="mb-3 flex items-center gap-2">
+            <Input
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              placeholder="Search clients…"
+              className="max-w-xs"
+            />
+            <Button onClick={openClientCreate} size="sm">
+              <UserPlus className="h-4 w-4" /> Add Client
+            </Button>
+          </div>
+
+          {clientsLoading ? (
+            <p className="text-muted-foreground p-4 text-sm">Loading…</p>
+          ) : proxyGroups.length === 0 ? (
+            <Card>
+              <CardContent className="text-muted-foreground p-10 text-center text-sm">
+                No proxy group exists yet. Create a group without any inbounds on the Groups page, then clients
+                created here will live in it — fully separate from config users.
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : filteredClients.length === 0 ? (
+            <Card>
+              <CardContent className="text-muted-foreground p-10 text-center text-sm">
+                No clients yet — click "Add Client" to create a Telegram-proxy client with its own quota and expiry.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {filteredClients.map((client) => {
+                const usedPct = client.data_limit ? Math.min(100, ((client.used_traffic || 0) / client.data_limit) * 100) : 0
+                const subLink = absoluteSubLink(client.subscription_url)
+                const expiry = expireDate(client.expire)
+                return (
+                  <Card key={client.id}>
+                    <CardContent className="flex flex-col gap-2 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor(client.status)}`} />
+                          <span className="truncate font-medium">{client.username}</span>
+                          <div className="flex gap-1">
+                            {groupBadge(client.group_ids).map((name) => (
+                              <Badge key={name} variant="secondary" className="text-[10px]">
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={client.status === 'disabled' ? 'Enable' : 'Disable'}
+                            onClick={() => toggleClientStatus(client)}
+                          >
+                            {client.status === 'disabled' ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              <Ban className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Edit" onClick={() => openClientEdit(client)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteClientTarget(client)}>
+                            <Trash2 className="text-destructive h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
 
-      {/* create / edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                          {formatBytes(client.used_traffic || 0)}
+                          {client.data_limit ? ` / ${formatBytes(client.data_limit)}` : ' / unlimited'}
+                        </span>
+                        {client.data_limit ? (
+                          <Progress value={usedPct} className="h-1.5 flex-1" />
+                        ) : (
+                          <span className="flex-1" />
+                        )}
+                        <span className="text-muted-foreground shrink-0">
+                          {expiry ? `exp ${new Date(expiry).toLocaleDateString()}` : 'never expires'}
+                        </span>
+                        {!!client.usage_coefficient && client.usage_coefficient !== 1 && (
+                          <Badge variant="outline" className="text-[10px]">
+                            ×{client.usage_coefficient}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={async () => {
+                            if (!subLink) return toast.error('No subscription link yet')
+                            await copy(subLink)
+                            toast.success('Subscription link copied')
+                          }}
+                        >
+                          <Copy className="h-3 w-3" /> Sub link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => subLink && window.open(subLink, '_blank')}
+                          title="Open subscription page"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ------------------------------------------------ Proxies tab */}
+        <TabsContent value="proxies" className="mt-3">
+          <div className="mb-3 flex items-center gap-2">
+            <Button onClick={openProxyCreate} size="sm">
+              <QrCode className="h-4 w-4" /> Add Proxy
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Enabled proxies appear on the subscription page of clients whose group matches.
+            </p>
+          </div>
+
+          {proxiesLoading ? (
+            <p className="text-muted-foreground p-4 text-sm">Loading…</p>
+          ) : proxies.length === 0 ? (
+            <Card>
+              <CardContent className="text-muted-foreground p-10 text-center text-sm">
+                No Telegram proxies yet — click "Add Proxy" to create one, then share the link with your clients.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {proxies.map((proxy) => (
+                <Card key={proxy.id}>
+                  <CardContent className="flex flex-col gap-2 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={
+                            proxy.enabled
+                              ? 'h-2 w-2 shrink-0 rounded-full bg-green-500'
+                              : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'
+                          }
+                        />
+                        <span className="truncate font-medium">{proxy.name}</span>
+                        <span className="text-muted-foreground truncate text-xs">
+                          {proxy.server}:{proxy.port}
+                        </span>
+                        {proxy.node_id && (
+                          <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">node #{proxy.node_id}</span>
+                        )}
+                        {proxy.group_id && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            {groups.find((g: { id: number }) => g.id === proxy.group_id)?.name ?? `group ${proxy.group_id}`}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleProxyEnabled(proxy, v)} />
+                        <Button variant="ghost" size="icon" title="Edit" onClick={() => openProxyEdit(proxy)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setQrLink(tgLink(proxy))}>
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteProxyTarget(proxy)}>
+                          <Trash2 className="text-destructive h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {proxy.sponsored_channel && (
+                      <p className="text-muted-foreground truncate text-xs">Sponsored: {proxy.sponsored_channel}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={async () => {
+                          await copy(tgLink(proxy))
+                          toast.success('tg:// link copied')
+                        }}
+                      >
+                        <Copy className="h-3 w-3" /> tg:// link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={async () => {
+                          await copy(httpsLink(proxy))
+                          toast.success('https link copied')
+                        }}
+                      >
+                        <Copy className="h-3 w-3" /> https link
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* ------------------------------------------------ client dialog */}
+      <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Telegram Proxy' : 'Add Telegram Proxy'}</DialogTitle>
+            <DialogTitle>{editingClient ? `Edit client "${editingClient.username}"` : 'Add Proxy Client'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            {!editingClient && (
+              <div className="grid gap-1">
+                <Label>Username</Label>
+                <Input
+                  value={clientForm.username}
+                  onChange={(e) => setClientForm({ ...clientForm, username: e.target.value })}
+                  placeholder="tg-customer-1"
+                />
+              </div>
+            )}
+            <div className="grid gap-1">
+              <Label>Proxy groups</Label>
+              <div className="flex flex-wrap gap-3 rounded-md border p-3">
+                {proxyGroups.length === 0 && (
+                  <span className="text-muted-foreground text-xs">No proxy group — create one on the Groups page.</span>
+                )}
+                {proxyGroups.map((g: { id: number; name: string; total_users?: number }) => (
+                  <label key={g.id} className="flex cursor-pointer items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={clientForm.groupIds.includes(g.id)}
+                      onChange={(e) =>
+                        setClientForm((f) => ({
+                          ...f,
+                          groupIds: e.target.checked ? [...f.groupIds, g.id] : f.groupIds.filter((id) => id !== g.id),
+                        }))
+                      }
+                    />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                Only inbound-less (proxy) groups are listed — clients can never join config groups.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1">
+                <Label>Data limit (GB)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={clientForm.dataLimitGb}
+                  onChange={(e) => setClientForm({ ...clientForm, dataLimitGb: e.target.value })}
+                  placeholder="empty = unlimited"
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label>{editingClient ? 'Extend expiry by (days)' : 'Expiry (days)'}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={clientForm.expireDays}
+                  onChange={(e) => setClientForm({ ...clientForm, expireDays: e.target.value })}
+                  placeholder="empty = never"
+                />
+              </div>
+            </div>
+            <div className="grid gap-1">
+              <Label>Usage coefficient</Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                value={clientForm.coefficient}
+                onChange={(e) => setClientForm({ ...clientForm, coefficient: e.target.value })}
+                placeholder="1"
+              />
+              <p className="text-muted-foreground text-[11px]">
+                Multiplies this client's counted traffic — 2 makes their quota burn twice as fast.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClientDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitClient} disabled={createClientMutation.isPending || modifyClientMutation.isPending}>
+              {editingClient ? 'Save' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------ proxy dialog */}
+      <Dialog open={proxyDialogOpen} onOpenChange={setProxyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingProxy ? 'Edit Telegram Proxy' : 'Add Telegram Proxy'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <div className="grid gap-1">
               <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="main-tg" />
+              <Input value={proxyForm.name} onChange={(e) => setProxyForm({ ...proxyForm, name: e.target.value })} placeholder="main-tg" />
             </div>
             <div className="grid gap-1">
               <Label>Server (IP or domain)</Label>
-              <Input value={form.server} onChange={(e) => setForm({ ...form, server: e.target.value })} placeholder="5.6.7.8" />
+              <Input value={proxyForm.server} onChange={(e) => setProxyForm({ ...proxyForm, server: e.target.value })} placeholder="5.6.7.8" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1">
                 <Label>Port</Label>
                 <Input
                   type="number"
-                  value={form.port}
-                  onChange={(e) => setForm({ ...form, port: e.target.value })}
+                  value={proxyForm.port}
+                  onChange={(e) => setProxyForm({ ...proxyForm, port: e.target.value })}
                   placeholder="443"
                 />
               </div>
               <div className="grid gap-1">
                 <Label>Enabled</Label>
                 <div className="flex h-10 items-center">
-                  <Switch checked={!!form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} />
+                  <Switch checked={!!proxyForm.enabled} onCheckedChange={(v) => setProxyForm({ ...proxyForm, enabled: v })} />
                 </div>
               </div>
             </div>
             <div className="grid gap-1">
               <Label>Secret</Label>
               <div className="flex gap-2">
-                <Input value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} placeholder="ee… (leave empty to auto-generate)" />
+                <Input
+                  value={proxyForm.secret}
+                  onChange={(e) => setProxyForm({ ...proxyForm, secret: e.target.value })}
+                  placeholder="ee… (leave empty to auto-generate)"
+                />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   title="Generate a new secret"
-                  onClick={() => setForm({ ...form, secret: generateMtprotoSecret() })}
+                  onClick={() => setProxyForm({ ...proxyForm, secret: generateMtprotoSecret() })}
                 >
                   <RefreshCcw className="h-4 w-4" />
                 </Button>
@@ -316,31 +757,32 @@ export default function ProxyPage() {
               <div className="grid gap-1">
                 <Label>Sponsored channel (optional)</Label>
                 <Input
-                  value={form.sponsoredChannel}
-                  onChange={(e) => setForm({ ...form, sponsoredChannel: e.target.value })}
+                  value={proxyForm.sponsoredChannel}
+                  onChange={(e) => setProxyForm({ ...proxyForm, sponsoredChannel: e.target.value })}
                   placeholder="@mychannel"
                 />
               </div>
               <div className="grid gap-1">
                 <Label>MTProxybot tag (optional)</Label>
                 <Input
-                  value={form.tag}
-                  onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                  value={proxyForm.tag}
+                  onChange={(e) => setProxyForm({ ...proxyForm, tag: e.target.value })}
                   placeholder="16 hex chars"
                 />
               </div>
             </div>
             <div className="grid gap-1">
-              <Label>Visible to group (optional — only users of this group see this proxy)</Label>
+              <Label>Visible to group (optional — only clients of this group see this proxy)</Label>
               <select
                 className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                value={form.groupId}
-                onChange={(e) => setForm({ ...form, groupId: e.target.value })}
+                value={proxyForm.groupId}
+                onChange={(e) => setProxyForm({ ...proxyForm, groupId: e.target.value })}
               >
-                <option value="">— all users —</option>
-                {groups.map((g: { id: number; name: string }) => (
+                <option value="">— all clients —</option>
+                {groups.map((g: { id: number; name: string; inbound_tags?: string[] | null }) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
+                    {!g.inbound_tags?.length ? ' (proxy group)' : ''}
                   </option>
                 ))}
               </select>
@@ -349,8 +791,8 @@ export default function ProxyPage() {
               <Label>Node server hosting this proxy (optional)</Label>
               <select
                 className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                value={form.nodeId}
-                onChange={(e) => setForm({ ...form, nodeId: e.target.value })}
+                value={proxyForm.nodeId}
+                onChange={(e) => setProxyForm({ ...proxyForm, nodeId: e.target.value })}
               >
                 <option value="">— none —</option>
                 {nodes.map((n: { id: number; name: string }) => (
@@ -365,11 +807,11 @@ export default function ProxyPage() {
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setProxyDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submit} disabled={createMutation.isPending || modifyMutation.isPending}>
-              {editing ? 'Save' : 'Create'}
+            <Button onClick={submitProxy} disabled={createProxyMutation.isPending || modifyProxyMutation.isPending}>
+              {editingProxy ? 'Save' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -386,20 +828,40 @@ export default function ProxyPage() {
         </DialogContent>
       </Dialog>
 
-      {/* delete confirm */}
-      <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+      {/* delete proxy confirm */}
+      <Dialog open={!!deleteProxyTarget} onOpenChange={(v) => !v && setDeleteProxyTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete "{deleteTarget?.name}"?</DialogTitle>
+            <DialogTitle>Delete "{deleteProxyTarget?.name}"?</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
-            Users will no longer see this Telegram proxy on their subscription page.
+            Clients will no longer see this Telegram proxy on their subscription page.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" onClick={() => setDeleteProxyTarget(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={removeMutation.isPending}>
+            <Button variant="destructive" onClick={confirmDeleteProxy} disabled={removeProxyMutation.isPending}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* delete client confirm */}
+      <Dialog open={!!deleteClientTarget} onOpenChange={(v) => !v && setDeleteClientTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete client "{deleteClientTarget?.username}"?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            The client and their subscription link will be removed. Their Telegram proxy access stops immediately.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteClientTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteClient} disabled={removeClientMutation.isPending}>
               Delete
             </Button>
           </DialogFooter>
