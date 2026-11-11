@@ -4,8 +4,6 @@ import asyncio
 
 from app import scheduler
 from app.nats import needs_shared_bridge_memory
-from app.nats.client import create_nats_client, get_jetstream_context
-from app.nats.kv_cleanup import compact_deleted_keys
 from app.nats.leader import is_job_leader
 from app.utils.logger import get_logger
 from config import nats_settings, runtime_settings
@@ -16,6 +14,10 @@ logger = get_logger("jobs")
 async def cleanup_node_sync():
     if not is_job_leader():
         return
+    # nats-py only loads on the actual cleanup path of NATS-enabled node roles.
+    from app.nats.client import create_nats_client, get_jetstream_context
+    from app.nats.kv_cleanup import compact_deleted_keys
+
     nc = await create_nats_client()
     if nc is None:
         return

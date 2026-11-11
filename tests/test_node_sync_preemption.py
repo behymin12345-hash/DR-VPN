@@ -85,7 +85,7 @@ def _make_node(node_id: int, **overrides) -> Node:
 
 @pytest.fixture
 def manager(monkeypatch: pytest.MonkeyPatch) -> NodeManager:
-    monkeypatch.setattr("app.node.ensure_bridge_memory", AsyncMock(return_value=None))
+    monkeypatch.setattr("app.node.nats_memory.ensure_bridge_memory", AsyncMock(return_value=None))
     monkeypatch.setattr("app.node.get_bridge_memory", lambda: (None, None, None))
     monkeypatch.setattr("app.node.create_node", lambda **kwargs: _FakePGNode(**kwargs))
     monkeypatch.setattr("app.node.nats_settings.node_update_users_batch_size", 2)

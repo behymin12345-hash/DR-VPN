@@ -7,18 +7,17 @@ import contextlib
 import inspect
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-import nats
-from nats.js.kv import KeyValue
-
 from app.nats import is_nats_enabled
-from app.nats.client import create_nats_client, get_jetstream_context, get_or_create_kv_bucket
-from app.nats.kv_cas import kv_cas_json, kv_get_json
-from app.node.nats_memory import WORKER_ID
+from app.node.bridge_state import WORKER_ID
 from app.utils.logger import get_logger
 from config import nats_settings, runtime_settings, server_settings
+
+if TYPE_CHECKING:
+    import nats
+    from nats.js.kv import KeyValue
 
 logger = get_logger("nats-leader")
 
@@ -73,6 +72,9 @@ async def _ensure_kv() -> KeyValue | None:
         return _kv
     if not is_nats_enabled():
         return None
+    # nats-py is imported only when a real leader lease is needed.
+    from app.nats.client import create_nats_client, get_jetstream_context, get_or_create_kv_bucket
+
     _nc = await create_nats_client()
     if _nc is None:
         return None
@@ -123,6 +125,8 @@ async def try_become_leader(lease_seconds: float = DEFAULT_LEASE_SECONDS) -> boo
     now = time.time()
     payload = _lease_payload(token, now + lease_seconds)
 
+    from app.nats.kv_cas import kv_cas_json, kv_get_json
+
     try:
         if await kv_cas_json(kv, leader_key(), payload, 0):
             _token = token
@@ -153,6 +157,8 @@ async def try_become_leader(lease_seconds: float = DEFAULT_LEASE_SECONDS) -> boo
 
 
 async def _heartbeat_loop(lease_seconds: float = DEFAULT_LEASE_SECONDS) -> None:
+    from app.nats.kv_cas import kv_cas_json, kv_get_json
+
     consecutive_failures = 0
     while _is_leader and _token is not None:
         # On renewal failure, retry promptly — do not wait another full HEARTBEAT_INTERVAL.
@@ -222,6 +228,8 @@ async def stop_job_leader() -> None:
         _heartbeat_task = None
 
     if _kv is not None and _token is not None:
+        from app.nats.kv_cas import kv_get_json
+
         key = leader_key()
         try:
             doc, rev = await kv_get_json(_kv, key)

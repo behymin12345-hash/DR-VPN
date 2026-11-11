@@ -206,7 +206,7 @@ def _db_node(**overrides) -> Node:
 @pytest.fixture
 def managed(manager: NodeManager, monkeypatch: pytest.MonkeyPatch) -> NodeManager:
     """A manager whose update_node creates fake bridge objects."""
-    monkeypatch.setattr("app.node.ensure_bridge_memory", AsyncMock(return_value=None))
+    monkeypatch.setattr("app.node.nats_memory.ensure_bridge_memory", AsyncMock(return_value=None))
     monkeypatch.setattr("app.node.get_bridge_memory", lambda: (None, None, None))
     monkeypatch.setattr("app.node.create_node", lambda **kwargs: _FakeNode(**kwargs))
     return manager

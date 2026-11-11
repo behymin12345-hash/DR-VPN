@@ -1,11 +1,9 @@
 import json
 from asyncio import Lock
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
-import nats
 from aiocache import cached
-from nats.js.client import JetStreamContext
-from nats.js.kv import KeyValue
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import on_shutdown, on_startup
@@ -33,11 +31,15 @@ from app.models.subscription import (
     XHTTPTransportConfig,
 )
 from app.nats import is_multi_worker, is_nats_enabled
-from app.nats.client import setup_nats_kv
-from app.nats.kv_cas import is_kv_miss
+from app.nats.kv_errors import is_kv_miss
 from app.nats.message import MessageTopic
 from app.nats.router import router
 from app.subscription.base import normalize_and_remove_none_values
+
+if TYPE_CHECKING:
+    import nats
+    from nats.js.client import JetStreamContext
+    from nats.js.kv import KeyValue
 from app.subscription.config_cache import clear_sub_config_cache
 from app.utils.logger import get_logger
 from config import runtime_settings
@@ -669,8 +671,11 @@ class HostManager:
         # Register handler with global router
         router.register_handler(MessageTopic.HOST, self._handle_host_message)
 
-        # Initialize NATS if enabled
+        # Initialize NATS if enabled. nats-py is imported here so NATS-disabled
+        # panels never pay its ~29MB RSS import cost.
         if self._nats_enabled:
+            from app.nats.client import setup_nats_kv
+
             self._nc, self._js, self._kv = await setup_nats_kv(self.KV_BUCKET_NAME)
 
         if await self._load_state_from_cache():

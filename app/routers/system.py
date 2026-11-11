@@ -1,7 +1,6 @@
 import asyncio
 import time
 
-from aiogram.types import Update
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -130,6 +129,10 @@ async def webhook_handler(request: Request, X_Telegram_Bot_Api_Secret_Token: str
     if not bot:
         return JSONResponse(status_code=200, content={"status": "ok"})
     dp = get_dispatcher()
+
+    # aiogram is imported on first webhook hit only; the bot-disabled panel
+    # (the common small-VPS case) never pays the ~30MB aiogram import cost.
+    from aiogram.types import Update
 
     update_data = await request.json()
     update = Update.model_validate(update_data, context={"bot": bot})

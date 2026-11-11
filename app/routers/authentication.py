@@ -2,7 +2,6 @@ import hmac
 from datetime import UTC
 from uuid import UUID
 
-from aiogram.utils.web_app import WebAppInitData, safe_parse_webapp_init_data
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import func, select
@@ -394,7 +393,11 @@ async def validate_mini_app_admin(db: AsyncSession, token: str) -> AdminValidati
         )
 
     try:
-        data: WebAppInitData = safe_parse_webapp_init_data(token=settings.token, init_data=token)
+        # aiogram is imported only when MiniApp login is actually used; a panel
+        # without it never pays the ~130MB aiogram import cost.
+        from aiogram.utils.web_app import safe_parse_webapp_init_data
+
+        data = safe_parse_webapp_init_data(token=settings.token, init_data=token)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

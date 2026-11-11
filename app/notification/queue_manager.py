@@ -3,10 +3,19 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.nats import is_nats_enabled
-from app.notification.nats_queue import InMemoryNotificationQueue, NatsNotificationQueue, NotificationQueue
+from app.notification.queue_base import InMemoryNotificationQueue, NotificationQueue
 from app.utils.logger import get_logger
 from config import nats_settings, runtime_settings
+
+
+def _make_queue(stream_name: str, subject: str, consumer_name: str) -> NotificationQueue:
+    """Build the queue for a NATS-enabled or in-memory deployment. nats-py is
+    only imported in the NATS case, so a default panel never loads it."""
+    if nats_settings.enabled:
+        from app.notification.nats_queue import NatsNotificationQueue
+
+        return NatsNotificationQueue(stream_name=stream_name, subject=subject, consumer_name=consumer_name)
+    return InMemoryNotificationQueue()
 
 logger = get_logger("Notification")
 
@@ -47,26 +56,18 @@ class WebhookNotification(BaseModel):
 
 
 # Telegram/Discord queue singleton
-queue_instance: NotificationQueue = (
-    NatsNotificationQueue(
-        stream_name=nats_settings.notification_stream,
-        subject=nats_settings.notification_subject,
-        consumer_name=nats_settings.notification_consumer,
-    )
-    if is_nats_enabled()
-    else InMemoryNotificationQueue()
+queue_instance: NotificationQueue = _make_queue(
+    nats_settings.notification_stream,
+    nats_settings.notification_subject,
+    nats_settings.notification_consumer,
 )
 
 
 # Webhook queue singleton
-webhook_queue_instance: NotificationQueue = (
-    NatsNotificationQueue(
-        stream_name=nats_settings.webhook_stream,
-        subject=nats_settings.webhook_subject,
-        consumer_name=nats_settings.webhook_consumer,
-    )
-    if is_nats_enabled()
-    else InMemoryNotificationQueue()
+webhook_queue_instance: NotificationQueue = _make_queue(
+    nats_settings.webhook_stream,
+    nats_settings.webhook_subject,
+    nats_settings.webhook_consumer,
 )
 
 
@@ -75,7 +76,7 @@ def get_queue() -> NotificationQueue:
 
 
 async def init_queue(queue: NotificationQueue):
-    if isinstance(queue, NatsNotificationQueue):
+    if queue.kind == "nats":
         # Only scheduler role (and all-in-one) actually dequeue and need the consumer
         await queue.initialize(create_consumer=runtime_settings.role.runs_scheduler)
 
@@ -93,7 +94,7 @@ async def initialize_queues():
 
 async def shutdown_queue(queue: NotificationQueue):
     """Close NATS connection on shutdown."""
-    if isinstance(queue, NatsNotificationQueue):
+    if queue.kind == "nats":
         try:
             if queue._consumer:
                 await queue._consumer.unsubscribe()

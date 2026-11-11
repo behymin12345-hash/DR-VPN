@@ -330,6 +330,10 @@ After=network.target
 Type=simple
 WorkingDirectory=${APP_DIR}
 ExecStart=${APP_DIR}/.venv/bin/python main.py
+# Cap glibc malloc arenas: threaded Python services otherwise reserve tens of
+# MB of unused arena space and never return it to the OS.
+Environment=MALLOC_ARENA_MAX=2
+Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536

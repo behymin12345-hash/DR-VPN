@@ -83,7 +83,7 @@ def _db_node(node_id: int, keep_alive: int, **overrides) -> Node:
 
 @pytest.fixture
 def beat(monkeypatch):
-    monkeypatch.setattr("app.node.ensure_bridge_memory", _ready)
+    monkeypatch.setattr("app.node.nats_memory.ensure_bridge_memory", _ready)
     monkeypatch.setattr("app.node.get_bridge_memory", lambda: (None, None, None))
     monkeypatch.setattr("app.node.create_node", lambda **kwargs: _FakeBridgeNode(**kwargs))
     monkeypatch.setattr(heartbeat_module, "needs_job_leader", lambda: False)

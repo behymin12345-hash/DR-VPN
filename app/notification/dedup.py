@@ -8,7 +8,6 @@ import time
 from typing import Any
 
 from app.nats import is_nats_enabled
-from app.nats.kv_cas import kv_cas_json, kv_get_json
 from app.utils.logger import get_logger
 from config import server_settings
 
@@ -96,6 +95,10 @@ async def _get_kv():
 
 
 async def _claim_shared(key: str, now: float) -> bool:
+    # Only the multi-worker NATS path reaches here; keep nats-py out of
+    # single-process panels by importing the KV helpers lazily.
+    from app.nats.kv_cas import kv_cas_json, kv_get_json
+
     kv = await _get_kv()
     if kv is None:
         return True

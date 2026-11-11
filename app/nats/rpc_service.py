@@ -1,13 +1,14 @@
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-
-import nats
-from nats.aio.subscription import Subscription
+from typing import TYPE_CHECKING
 
 from app.nats import is_nats_enabled
-from app.nats.client import create_nats_client
 from config import runtime_settings
+
+if TYPE_CHECKING:
+    import nats
+    from nats.aio.subscription import Subscription
 
 
 class BaseRpcService:
@@ -39,6 +40,9 @@ class BaseRpcService:
             return
         if runtime_settings.role.requires_nats and not is_nats_enabled():
             return
+
+        # nats-py is imported only when the service actually starts serving RPCs.
+        from app.nats.client import create_nats_client
 
         self._nc = await create_nats_client()
         if not self._nc:

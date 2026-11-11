@@ -73,9 +73,9 @@ from app.nats.leader import needs_job_leader
 from app.nats.node_rpc import node_nats_client
 from app.node import UserSyncPreemptedError, core_users, node_manager
 from app.node.bridge import FullSyncConflictError
+from app.node.bridge_state import clear_bridge_memory_for_node
 from app.node.heartbeat import heartbeat_interval, keep_alive_too_short, shortest_safe_keep_alive
 from app.node.manager_sync import publish_node_sync
-from app.node.nats_memory import clear_bridge_memory_for_node
 from app.operation import BaseOperation, OperatorType
 from app.utils.logger import get_logger
 from config import runtime_settings

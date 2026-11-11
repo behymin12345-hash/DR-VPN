@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from app import on_startup
 from app.models.settings import NotificationSettings
-from app.notification.nats_queue import NotificationDelivery
+from app.notification.queue_base import NotificationDelivery
 from app.notification.queue_manager import (
     DiscordNotification,
     TelegramNotification,

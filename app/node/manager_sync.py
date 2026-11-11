@@ -8,7 +8,7 @@ from app.db.models import NodeStatus
 from app.nats.message import MessageTopic
 from app.nats.router import router
 from app.node import node_manager
-from app.node.nats_memory import WORKER_ID, clear_bridge_memory_for_node
+from app.node.bridge_state import WORKER_ID, clear_bridge_memory_for_node
 from app.utils.logger import get_logger
 
 logger = get_logger("node-manager-sync")

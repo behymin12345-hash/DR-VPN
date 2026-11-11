@@ -7,7 +7,6 @@ import base64
 import contextlib
 import hashlib
 import json
-import os
 import time
 from collections.abc import Awaitable, Callable
 from itertools import islice
@@ -32,20 +31,23 @@ from app.nats.client import create_nats_client, get_jetstream_context, get_or_cr
 from app.nats.kv_cas import CasKv, cas_retry_backoff, kv_cas_json, kv_get_json
 from app.nats.kv_index import KvKeyIndex
 from app.nats.kv_watch import watch_kv
+from app.node.bridge_state import (
+    WORKER_ID,
+    get_bridge_memory,
+    reset_bridge_memory,
+    set_bridge_memory,
+)
 from app.utils.logger import get_logger
 from config import nats_settings
 
 logger = get_logger("node-nats-memory")
 
-WORKER_ID = f"{os.getpid()}:{uuid4().hex[:8]}"
 # Stay under default NATS max_payload (1MiB) with headroom for JSON framing.
 _MAX_USER_SYNC_VALUE_BYTES = min(900_000, nats_settings.node_command_max_payload_bytes)
 
 _nc: nats.NATS | None = None
 _user_sync_kv: KeyValue | None = None
 _lifecycle_kv: KeyValue | None = None
-_user_sync_store: NatsUserSyncStore | None = None
-_lifecycle_coordinator: NatsNodeLifecycleCoordinator | None = None
 _init_lock = asyncio.Lock()
 
 
@@ -903,32 +905,24 @@ class NatsNodeLifecycleCoordinator:
             logger.debug("Failed to clear lifecycle key=%s: %s", key, exc)
 
 
-async def clear_bridge_memory_for_node(node_id: int | str) -> None:
-    store, coordinator, _ = get_bridge_memory()
-    nid = str(node_id)
-    if store is not None:
-        await store.clear(nid)
-        await store.clear_full_sync(nid)
-    if coordinator is not None:
-        await coordinator.clear(nid)
-
-
 async def ensure_bridge_memory() -> tuple[NatsUserSyncStore | None, NatsNodeLifecycleCoordinator | None]:
     """Initialize NATS KV bridge memory for multi-uvicorn workers. Idempotent.
 
     Split-role / single-worker deployments keep the bridge's in-process defaults.
     """
-    global _nc, _user_sync_kv, _lifecycle_kv, _user_sync_store, _lifecycle_coordinator
+    global _nc, _user_sync_kv, _lifecycle_kv
 
     if not needs_shared_bridge_memory():
         return None, None
 
-    if _user_sync_store is not None and _lifecycle_coordinator is not None:
-        return _user_sync_store, _lifecycle_coordinator
+    store, coordinator, _ = get_bridge_memory()
+    if store is not None and coordinator is not None:
+        return store, coordinator
 
     async with _init_lock:
-        if _user_sync_store is not None and _lifecycle_coordinator is not None:
-            return _user_sync_store, _lifecycle_coordinator
+        store, coordinator, _ = get_bridge_memory()
+        if store is not None and coordinator is not None:
+            return store, coordinator
 
         _nc = await create_nats_client()
         if _nc is None:
@@ -947,24 +941,21 @@ async def ensure_bridge_memory() -> tuple[NatsUserSyncStore | None, NatsNodeLife
             _lifecycle_kv = None
             return None, None
 
-        _user_sync_store = NatsUserSyncStore(_user_sync_kv)
-        _lifecycle_coordinator = NatsNodeLifecycleCoordinator(_lifecycle_kv)
+        store = NatsUserSyncStore(_user_sync_kv)
+        coordinator = NatsNodeLifecycleCoordinator(_lifecycle_kv)
+        set_bridge_memory(store, coordinator)
         logger.info("Node bridge NATS memory ready (worker_id=%s)", WORKER_ID)
-        return _user_sync_store, _lifecycle_coordinator
-
-
-def get_bridge_memory() -> tuple[NatsUserSyncStore | None, NatsNodeLifecycleCoordinator | None, str]:
-    return _user_sync_store, _lifecycle_coordinator, WORKER_ID
+        return store, coordinator
 
 
 async def shutdown_bridge_memory() -> None:
-    global _nc, _user_sync_kv, _lifecycle_kv, _user_sync_store, _lifecycle_coordinator
-    if _user_sync_store is not None:
-        await _user_sync_store.close()
+    global _nc, _user_sync_kv, _lifecycle_kv
+    store, _coordinator, _ = get_bridge_memory()
+    if store is not None:
+        await store.close()
     if _nc is not None:
         await _nc.close()
     _nc = None
     _user_sync_kv = None
     _lifecycle_kv = None
-    _user_sync_store = None
-    _lifecycle_coordinator = None
+    reset_bridge_memory()

@@ -24,12 +24,12 @@ from nats.js.errors import BadRequestError, NotFoundError, ServiceUnavailableErr
 
 from app.jobs import send_notifications as webhook_job
 from app.models.settings import NotificationSettings, Webhook, WebhookInfo
-from app.notification import client as notification_client, nats_queue, queue_manager
-from app.notification.nats_queue import (
+from app.notification import client as notification_client, queue_manager
+from app.notification.nats_queue import NatsNotificationQueue
+from app.notification.queue_base import (
     QUEUE_MAX_BYTES,
     QUEUE_MAX_MESSAGES,
     InMemoryNotificationQueue,
-    NatsNotificationQueue,
 )
 
 STREAM = "WEBHOOKS"
@@ -54,7 +54,9 @@ def clock(monkeypatch: pytest.MonkeyPatch):
         def now(cls, tz=None):
             return datetime.now(tz) + timedelta(seconds=state.offset)
 
-    monkeypatch.setattr(nats_queue, "time", SimpleNamespace(monotonic=state.monotonic))
+    from app.notification import queue_base
+
+    monkeypatch.setattr(queue_base, "time", SimpleNamespace(monotonic=state.monotonic))
     monkeypatch.setattr(webhook_job, "dt", ShiftedDatetime)
     monkeypatch.setattr(notification_client, "time", SimpleNamespace(time=lambda: time.time() + state.offset))
     return state

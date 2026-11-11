@@ -911,8 +911,11 @@ async def test_validate_mini_app_admin_duplicate_telegram_id_conflict(access_tok
             )
 
         monkeypatch.setattr("app.routers.authentication.telegram_settings", fake_telegram_settings)
+        # The panel imports aiogram lazily on first MiniApp login (RAM diet),
+        # so patch it at the source module the handler reads at call time.
+
         monkeypatch.setattr(
-            "app.routers.authentication.safe_parse_webapp_init_data",
+            "aiogram.utils.web_app.safe_parse_webapp_init_data",
             lambda token, init_data: SimpleNamespace(user=SimpleNamespace(id=telegram_id)),
         )
 

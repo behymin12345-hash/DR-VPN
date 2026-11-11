@@ -8,7 +8,7 @@ from PasarGuardNodeBridge.common.service_pb2 import User as ProtoUser
 
 from app.db.models import Node, NodeConnectionType
 from app.node.bridge import create_node
-from app.node.nats_memory import ensure_bridge_memory, get_bridge_memory
+from app.node.bridge_state import get_bridge_memory
 from app.node.user import core_users
 from app.utils.logger import get_logger
 from config import nats_settings
@@ -112,6 +112,10 @@ class NodeManager:
             self._user_sync_tasks.pop(node_id, None)
 
     async def update_node(self, node: Node) -> PasarGuardNode:
+        # nats_memory (and nats-py) is only imported when shared bridge memory
+        # is actually needed — multi-worker NATS deployments.
+        from app.node.nats_memory import ensure_bridge_memory
+
         await ensure_bridge_memory()
 
         self._keep_alives[node.id] = node.keep_alive or 0

@@ -11,7 +11,8 @@ from nats.js.errors import NotFoundError, ServiceUnavailableError
 from app.jobs import review_users
 from app.models.settings import Webhook, WebhookInfo
 from app.notification import queue_manager, webhook as webhook_notification
-from app.notification.nats_queue import InMemoryNotificationQueue, NatsNotificationQueue
+from app.notification.nats_queue import NatsNotificationQueue
+from app.notification.queue_base import InMemoryNotificationQueue
 
 STREAM_FULL = ServiceUnavailableError(code=503, err_code=10077, description="maximum messages exceeded")
 BYTES_FULL = ServiceUnavailableError(code=503, err_code=10077, description="maximum bytes exceeded")

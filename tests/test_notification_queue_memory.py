@@ -7,15 +7,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.notification import nats_queue
-from app.notification.nats_queue import RETRY_METADATA_RESERVE, InMemoryNotificationQueue
+from app.notification.nats_queue import RETRY_METADATA_RESERVE
+from app.notification.queue_base import InMemoryNotificationQueue
 
 
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch):
     """Controllable monotonic clock for the queue module only (asyncio keeps the real one)."""
     state = SimpleNamespace(offset=0.0)
-    monkeypatch.setattr(nats_queue, "time", SimpleNamespace(monotonic=lambda: time.monotonic() + state.offset))
+    from app.notification import queue_base
+
+    monkeypatch.setattr(queue_base, "time", SimpleNamespace(monotonic=lambda: time.monotonic() + state.offset))
     return state
 
 

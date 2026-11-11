@@ -1,12 +1,9 @@
 import json
 from asyncio import Lock
 from copy import deepcopy
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-import nats
 from aiocache import cached
-from nats.js.client import JetStreamContext
-from nats.js.kv import KeyValue
 
 from app import on_shutdown, on_startup
 from app.core.abstract_core import AbstractCore
@@ -17,11 +14,14 @@ from app.db.crud.core import get_core_configs
 from app.db.models import CoreConfig, CoreType
 from app.models.core import CoreListQuery
 from app.nats import is_multi_worker, is_nats_enabled
-from app.nats.client import setup_nats_kv
-from app.nats.kv_cas import is_kv_miss
 from app.nats.message import MessageTopic
 from app.nats.router import router
 from app.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    import nats
+    from nats.js.client import JetStreamContext
+    from nats.js.kv import KeyValue
 
 
 class CoreManager:
@@ -103,6 +103,8 @@ class CoreManager:
             await self.get_inbounds_by_tag.cache.clear()
             return True
         except Exception as exc:
+            from app.nats.kv_errors import is_kv_miss
+
             if is_kv_miss(exc):
                 self._logger.debug("Core manager state cache is empty")
                 return False
@@ -198,8 +200,11 @@ class CoreManager:
         # Register handler with global router
         router.register_handler(MessageTopic.CORE, self._handle_core_message)
 
-        # Initialize NATS if enabled
+        # Initialize NATS if enabled. nats-py is imported here so NATS-disabled
+        # panels never pay its ~29MB RSS import cost.
         if self._nats_enabled:
+            from app.nats.client import setup_nats_kv
+
             self._nc, self._js, self._kv = await setup_nats_kv(self.KV_BUCKET_NAME)
 
         cached_loaded = await self._load_state_from_cache()

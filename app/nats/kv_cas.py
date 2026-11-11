@@ -12,6 +12,7 @@ import nats.errors as nats_errors
 import nats.js.errors as nats_js_errors
 from nats.js.kv import KeyValue
 
+from app.nats.kv_errors import is_kv_miss  # re-exported for existing importers
 from app.nats.kv_watch import watch_kv
 from app.utils.logger import get_logger
 
@@ -23,14 +24,6 @@ _CAS_RETRY_BASE_DELAY = 0.01
 async def cas_retry_backoff() -> None:
     """Small jittered delay between CAS retry attempts to avoid hammering NATS under contention."""
     await asyncio.sleep(_CAS_RETRY_BASE_DELAY * (1 + random.random()))
-
-
-def is_kv_miss(exc: BaseException) -> bool:
-    """True when JetStream KV has no value yet (first boot / deleted key)."""
-    if isinstance(exc, (nats_js_errors.KeyNotFoundError, nats_js_errors.KeyDeletedError)):
-        return True
-    text = str(exc).lower()
-    return "key not found" in text or "key deleted" in text
 
 
 class CasKv(Protocol):

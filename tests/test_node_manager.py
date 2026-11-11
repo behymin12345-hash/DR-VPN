@@ -44,7 +44,7 @@ async def test_update_node_reuses_object_and_skips_remote_stop_when_unchanged(mo
     transient health-check false negative into a permanent Start/Stop restart loop."""
     manager = NodeManager()
 
-    monkeypatch.setattr("app.node.ensure_bridge_memory", lambda: _AwaitableNone())
+    monkeypatch.setattr("app.node.nats_memory.ensure_bridge_memory", lambda: _AwaitableNone())
     monkeypatch.setattr("app.node.get_bridge_memory", lambda: (None, None, None))
     monkeypatch.setattr("app.node.create_node", lambda **kwargs: _FakePGNode(**kwargs))
 
@@ -163,7 +163,7 @@ async def test_update_node_replaces_on_name_or_coefficient_change(monkeypatch: p
     since we cannot refresh metadata through the bridge API."""
     manager = NodeManager()
 
-    monkeypatch.setattr("app.node.ensure_bridge_memory", lambda: _AwaitableNone())
+    monkeypatch.setattr("app.node.nats_memory.ensure_bridge_memory", lambda: _AwaitableNone())
     monkeypatch.setattr("app.node.get_bridge_memory", lambda: (None, None, None))
 
     monkeypatch.setattr("app.node.create_node", lambda **kwargs: _FakePGNode(**kwargs))

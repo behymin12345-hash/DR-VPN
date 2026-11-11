@@ -10,7 +10,7 @@ from app import on_shutdown, scheduler
 from app.db import GetDB
 from app.db.models import NotificationReminder
 from app.models.settings import Webhook, WebhookInfo
-from app.notification.nats_queue import NotificationDelivery
+from app.notification.queue_base import NotificationDelivery
 from app.notification.queue_manager import (
     WebhookNotification,
     get_webhook_queue,

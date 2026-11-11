@@ -1,10 +1,11 @@
 import asyncio
 import json
-
-import nats
+from typing import TYPE_CHECKING
 
 from app.nats import is_nats_enabled
-from app.nats.client import create_nats_client
+
+if TYPE_CHECKING:
+    import nats
 
 
 class NatsRpcClient:
@@ -23,6 +24,9 @@ class NatsRpcClient:
         async with self._lock:
             if self._nc and not self._nc.is_closed:
                 return self._nc
+            # Imported here so NATS-disabled panels never load nats-py.
+            from app.nats.client import create_nats_client
+
             self._nc = await create_nats_client()
             return self._nc
 

@@ -14,8 +14,8 @@ from app.models.settings import NodeHealthSettings
 from app.nats import is_multi_worker, needs_shared_bridge_memory
 from app.nats.leader import is_job_leader, needs_job_leader, set_on_leadership_lost
 from app.node import node_manager
+from app.node.bridge_state import get_bridge_memory
 from app.node.heartbeat import node_heartbeat
-from app.node.nats_memory import ensure_bridge_memory, get_bridge_memory, shutdown_bridge_memory
 from app.operation import OperatorType
 from app.operation.node import NodeOperation
 from app.settings import general_settings
@@ -567,6 +567,8 @@ async def initialize_nodes():
     if not runtime_settings.role.runs_node:
         return
 
+    from app.node.nats_memory import ensure_bridge_memory
+
     await ensure_bridge_memory()
 
     startup_log = logger.debug if server_settings.workers > 1 else logger.info
@@ -618,7 +620,13 @@ async def initialize_nodes():
         on_shutdown(shutdown_nodes)
 
     on_shutdown(_stop_node_loops)
-    on_shutdown(shutdown_bridge_memory)
+
+    def _shutdown_bridge_memory():
+        from app.node.nats_memory import shutdown_bridge_memory
+
+        return shutdown_bridge_memory()
+
+    on_shutdown(_shutdown_bridge_memory)
 
 
 async def _stop_node_loops():

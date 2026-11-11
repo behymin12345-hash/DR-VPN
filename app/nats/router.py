@@ -1,13 +1,14 @@
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
-import nats
-
-from app.nats.client import create_nats_client
 from app.nats.message import MessageTopic, NatsMessage
 from app.utils.logger import get_logger
 from config import nats_settings, runtime_settings, server_settings
+
+if TYPE_CHECKING:
+    import nats
 
 logger = get_logger("nats-router")
 
@@ -27,8 +28,11 @@ class NatsMessageRouter:
         self._running = False
 
     async def _get_client(self) -> nats.NATS | None:
-        """Get or create NATS client."""
+        """Get or create NATS client. The nats-py library is imported on first
+        connection so NATS-disabled deployments never load it (~14MB RSS)."""
         if not self._nc:
+            from app.nats.client import create_nats_client
+
             self._nc = await create_nats_client()
         return self._nc
 
