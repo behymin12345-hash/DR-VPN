@@ -117,9 +117,13 @@ install_dashboard_build() {
         unzip -oq /tmp/dashboard-build.zip -d "$APP_DIR/dashboard/"
         rm -f /tmp/dashboard-build.zip
     else
-        err "Could not download the dashboard build (${asset})."
-        err "Install bun manually and build it: cd ${APP_DIR}/dashboard && bun install && bun run build"
-        exit 1
+        # Non-fatal on purpose: aborting here would leave a drvpn update with
+        # new code on disk but the OLD process still running (no migrations,
+        # no restart). The current dashboard keeps working until the asset
+        # appears and the next `drvpn update` picks it up.
+        warn "Could not download the dashboard build (${asset})."
+        warn "Continuing with the currently deployed dashboard - run drvpn update again later."
+        warn "Manual build: cd ${APP_DIR}/dashboard && bun install && bun run build"
     fi
 }
 
