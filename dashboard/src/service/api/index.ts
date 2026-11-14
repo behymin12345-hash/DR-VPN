@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.13
+ * OpenAPI spec version: 0.1.14
  */
 import {
   useMutation,
@@ -2945,6 +2945,28 @@ export interface WarpOutboundResponse {
   device_id?: string | null;
   outbound?: WarpOutboundResponseOutbound;
   warnings?: string[];
+}
+
+export interface WgImportRequest {
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  name: string;
+  /**
+     * @minLength 20
+     * @maxLength 20000
+     */
+  config_text: string;
+}
+
+export type WgTunnelSummaryOutbound = { [key: string]: unknown };
+
+export interface WgTunnelSummary {
+  name: string;
+  slug: string;
+  endpoint: string;
+  outbound: WgTunnelSummaryOutbound;
 }
 
 export interface WireGuardSubnetUsage {
@@ -12616,6 +12638,350 @@ export const useRemoveWarpDevice = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRemoveWarpDeviceMutationOptions(options), queryClient);
+    }
+
+export const getListWgTunnelsUrl = () => {
+
+
+
+
+  return `/api/locations/wg`
+}
+
+/**
+ * @summary List Wg Tunnels
+ */
+export const listWgTunnels = async ( options?: RequestInit): Promise<WgTunnelSummary[]> => {
+
+  return orvalFetcher<WgTunnelSummary[]>(getListWgTunnelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWgTunnelsQueryKey = () => {
+    return [
+    `/api/locations/wg`
+    ] as const;
+    }
+
+
+export const getListWgTunnelsQueryOptions = <TData = Awaited<ReturnType<typeof listWgTunnels>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWgTunnelsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWgTunnels>>> = ({ signal }) => listWgTunnels({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListWgTunnelsQueryResult = NonNullable<Awaited<ReturnType<typeof listWgTunnels>>>
+export type ListWgTunnelsQueryError = ErrorType<unknown>
+
+
+export function useListWgTunnels<TData = Awaited<ReturnType<typeof listWgTunnels>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWgTunnels>>,
+          TError,
+          Awaited<ReturnType<typeof listWgTunnels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWgTunnels<TData = Awaited<ReturnType<typeof listWgTunnels>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWgTunnels>>,
+          TError,
+          Awaited<ReturnType<typeof listWgTunnels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWgTunnels<TData = Awaited<ReturnType<typeof listWgTunnels>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Wg Tunnels
+ */
+
+export function useListWgTunnels<TData = Awaited<ReturnType<typeof listWgTunnels>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWgTunnels>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListWgTunnelsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportWgTunnelUrl = () => {
+
+
+
+
+  return `/api/locations/wg`
+}
+
+/**
+ * @summary Import Wg Tunnel
+ */
+export const importWgTunnel = async (wgImportRequest: WgImportRequest, options?: RequestInit): Promise<WgTunnelSummary> => {
+
+  return orvalFetcher<WgTunnelSummary>(getImportWgTunnelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wgImportRequest)
+  }
+);}
+
+
+
+
+
+export const getImportWgTunnelMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importWgTunnel>>, TError,{data: BodyType<WgImportRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof importWgTunnel>>, TError,{data: BodyType<WgImportRequest>}, TContext> => {
+
+const mutationKey = ['importWgTunnel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importWgTunnel>>, {data: BodyType<WgImportRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importWgTunnel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportWgTunnelMutationResult = NonNullable<Awaited<ReturnType<typeof importWgTunnel>>>
+    export type ImportWgTunnelMutationBody = BodyType<WgImportRequest>
+    export type ImportWgTunnelMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Import Wg Tunnel
+ */
+export const useImportWgTunnel = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importWgTunnel>>, TError,{data: BodyType<WgImportRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importWgTunnel>>,
+        TError,
+        {data: BodyType<WgImportRequest>},
+        TContext
+      > => {
+      return useMutation(getImportWgTunnelMutationOptions(options), queryClient);
+    }
+
+export const getPingWgTunnelUrl = (slug: string,) => {
+
+
+
+
+  return `/api/locations/wg/${slug}/ping`
+}
+
+/**
+ * @summary Ping Wg Tunnel
+ */
+export const pingWgTunnel = async (slug: string, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getPingWgTunnelUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPingWgTunnelQueryKey = (slug: string,) => {
+    return [
+    `/api/locations/wg/${slug}/ping`
+    ] as const;
+    }
+
+
+export const getPingWgTunnelQueryOptions = <TData = Awaited<ReturnType<typeof pingWgTunnel>>, TError = ErrorType<HTTPValidationError>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPingWgTunnelQueryKey(slug);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof pingWgTunnel>>> = ({ signal }) => pingWgTunnel(slug, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PingWgTunnelQueryResult = NonNullable<Awaited<ReturnType<typeof pingWgTunnel>>>
+export type PingWgTunnelQueryError = ErrorType<HTTPValidationError>
+
+
+export function usePingWgTunnel<TData = Awaited<ReturnType<typeof pingWgTunnel>>, TError = ErrorType<HTTPValidationError>>(
+ slug: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof pingWgTunnel>>,
+          TError,
+          Awaited<ReturnType<typeof pingWgTunnel>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePingWgTunnel<TData = Awaited<ReturnType<typeof pingWgTunnel>>, TError = ErrorType<HTTPValidationError>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof pingWgTunnel>>,
+          TError,
+          Awaited<ReturnType<typeof pingWgTunnel>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePingWgTunnel<TData = Awaited<ReturnType<typeof pingWgTunnel>>, TError = ErrorType<HTTPValidationError>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Ping Wg Tunnel
+ */
+
+export function usePingWgTunnel<TData = Awaited<ReturnType<typeof pingWgTunnel>>, TError = ErrorType<HTTPValidationError>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof pingWgTunnel>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPingWgTunnelQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRemoveWgTunnelUrl = (slug: string,) => {
+
+
+
+
+  return `/api/locations/wg/${slug}`
+}
+
+/**
+ * @summary Remove Wg Tunnel
+ */
+export const removeWgTunnel = async (slug: string, options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getRemoveWgTunnelUrl(slug),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveWgTunnelMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeWgTunnel>>, TError,{slug: string}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeWgTunnel>>, TError,{slug: string}, TContext> => {
+
+const mutationKey = ['removeWgTunnel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeWgTunnel>>, {slug: string}> = (props) => {
+          const {slug} = props ?? {};
+
+          return  removeWgTunnel(slug,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveWgTunnelMutationResult = NonNullable<Awaited<ReturnType<typeof removeWgTunnel>>>
+
+    export type RemoveWgTunnelMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Remove Wg Tunnel
+ */
+export const useRemoveWgTunnel = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeWgTunnel>>, TError,{slug: string}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeWgTunnel>>,
+        TError,
+        {slug: string},
+        TContext
+      > => {
+      return useMutation(getRemoveWgTunnelMutationOptions(options), queryClient);
     }
 
 export const getGetHostUrl = (hostId: number,) => {

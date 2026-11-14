@@ -285,3 +285,74 @@ async def remove_warp_device(
 
     removed = remove_warp_state()
     return {"ok": True, "removed": removed}
+
+
+# ---------------------------------------------------------------------------
+# Imported WireGuard tunnels - paste any wg-quick config (Mullvad, ProtonVPN,
+# Windscribe, your own VPS ...) and it becomes a country-exit location.
+# ---------------------------------------------------------------------------
+
+class WgImportRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    config_text: str = Field(min_length=20, max_length=20000)
+
+class WgTunnelSummary(BaseModel):
+    name: str
+    slug: str
+    endpoint: str
+    outbound: dict
+
+@router.get("/wg", response_model=list[WgTunnelSummary])
+async def list_wg_tunnels(
+    _: AdminDetails = Depends(require_permission("settings", "read")),
+):
+    from app.operation.wg_tunnels import build_wg_outbound, list_tunnels
+
+    return [
+        WgTunnelSummary(
+            name=t["name"],
+            slug=t["slug"],
+            endpoint=t["endpoint"],
+            outbound=build_wg_outbound(t, f"wg-{t['slug']}"),
+        )
+        for t in list_tunnels()
+    ]
+
+@router.post("/wg", response_model=WgTunnelSummary)
+async def import_wg_tunnel(
+    body: WgImportRequest,
+    _: AdminDetails = Depends(require_permission("settings", "update")),
+):
+    from app.operation.wg_tunnels import build_wg_outbound, save_tunnel
+
+    try:
+        tunnel = save_tunnel(body.name, body.config_text)
+    except ValueError as exc:
+        raise HTTPExceptionServiceUnavailable(f"Invalid WireGuard config: {exc}")
+    return WgTunnelSummary(
+        name=tunnel["name"],
+        slug=tunnel["slug"],
+        endpoint=tunnel["endpoint"],
+        outbound=build_wg_outbound(tunnel, f"wg-{tunnel['slug']}"),
+    )
+
+@router.get("/wg/{slug}/ping")
+async def ping_wg_tunnel(
+    slug: str,
+    _: AdminDetails = Depends(require_permission("settings", "read")),
+):
+    from app.operation.wg_tunnels import ping_tunnel
+
+    return await ping_tunnel(slug)
+
+@router.delete("/wg/{slug}")
+async def remove_wg_tunnel(
+    slug: str,
+    _: AdminDetails = Depends(require_permission("settings", "update")),
+):
+    from app.operation.wg_tunnels import remove_tunnel
+
+    removed = remove_tunnel(slug)
+    if not removed:
+        raise HTTPExceptionServiceUnavailable(f"tunnel '{slug}' not found")
+    return {"ok": True, "removed": slug}

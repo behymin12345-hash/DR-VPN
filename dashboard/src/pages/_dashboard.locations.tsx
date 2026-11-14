@@ -20,7 +20,7 @@ import {
   CoreResponse,
 } from '@/service/api'
 import { BALANCER_PORT, LOCATIONS, ccFlag, OUTBOUND_PREFIX } from '@/constants/locations'
-import { useGetWarp, useRegisterWarpDevice, useRemoveWarpDevice } from '@/service/api'
+import { useGetWarp, useRegisterWarpDevice, useRemoveWarpDevice, useListWgTunnels, useImportWgTunnel, useRemoveWgTunnel, pingWgTunnel } from '@/service/api'
 import { cn } from '@/lib/utils'
 
 type Binding = Record<string, string> // inboundTag -> location value ('' | 'balancer' | 'T01' | 'P05' ...)
@@ -62,6 +62,19 @@ export default function LocationsPage() {
   const warpOutbound = warpQuery.data?.outbound ?? null
   const registerWarpMutation = useRegisterWarpDevice()
   const removeWarpMutation = useRemoveWarpDevice()
+  const wgQuery = useListWgTunnels()
+  const wgTunnels = wgQuery.data ?? []
+  const importWgMutation = useImportWgTunnel()
+  const removeWgMutation = useRemoveWgTunnel()
+  const [wgName, setWgName] = useState('')
+  const [wgConfig, setWgConfig] = useState('')
+  interface WgPingState {
+    ok: boolean
+    latency?: number
+    error?: string
+    fetching?: boolean
+  }
+  const [wgPing, setWgPing] = useState<Record<string, WgPingState>>({})
 
   useEffect(() => {
     if (nodeId === null && nodes.length > 0) setNodeId(nodes[0].id)
@@ -88,6 +101,7 @@ export default function LocationsPage() {
         let value = ''
         if (tag === OUTBOUND_PREFIX + 'auto') value = 'balancer'
         else if (tag === WARP_OUTBOUND_TAG) value = 'warp'
+        else if (tag.startsWith('wg-')) value = tag
         else {
           const port = Number(ob.settings?.servers?.[0]?.port ?? 0)
           const loc = LOCATIONS.find(l => l.port === port)
@@ -162,11 +176,17 @@ export default function LocationsPage() {
     try {
       const config = JSON.parse(JSON.stringify(core.config)) as Record<string, any>
       config.outbounds = (config.outbounds ?? []).filter(
-        (o: any) => !String(o.tag ?? '').startsWith(OUTBOUND_PREFIX) && String(o.tag ?? '') !== WARP_OUTBOUND_TAG,
+        (o: any) =>
+            !String(o.tag ?? '').startsWith(OUTBOUND_PREFIX) &&
+            String(o.tag ?? '') !== WARP_OUTBOUND_TAG &&
+            !String(o.tag ?? '').startsWith('wg-'),
       )
       config.routing = config.routing ?? { rules: [] }
       config.routing.rules = (config.routing.rules ?? []).filter(
-        (r: any) => !String(r.outboundTag ?? '').startsWith(OUTBOUND_PREFIX) && String(r.outboundTag ?? '') !== WARP_OUTBOUND_TAG,
+        (r: any) =>
+            !String(r.outboundTag ?? '').startsWith(OUTBOUND_PREFIX) &&
+            String(r.outboundTag ?? '') !== WARP_OUTBOUND_TAG &&
+            !String(r.outboundTag ?? '').startsWith('wg-'),
       )
 
       const usedValues = new Set<string>()
@@ -175,6 +195,17 @@ export default function LocationsPage() {
         if (v) usedValues.add(v)
       }
       const outboundsByValue = new Map<string, string>()
+      const wgUsed = [...usedValues].filter(v => v.startsWith('wg-'))
+      for (const v of wgUsed) {
+        const tunnel = wgTunnels.find(t => `wg-${t.slug}` === v)
+        if (!tunnel) {
+          toast.error(`WireGuard tunnel for ${v} not found`)
+          setSaving(false)
+          return
+        }
+        outboundsByValue.set(v, v)
+        config.outbounds.push({ ...(tunnel.outbound as any), tag: v })
+      }
       if (usedValues.has('warp')) {
         if (!warpRegistered || !warpOutbound) {
           toast.error('Cloudflare WARP is not registered yet — press Register WARP first')
@@ -341,6 +372,95 @@ export default function LocationsPage() {
                 {registerWarpMutation.isPending ? 'Registering…' : 'Register WARP'}
               </Button>
             )}
+          </div>
+
+          {/* Imported WireGuard tunnels - paste any wg-quick config */}
+          <div className="mt-4 rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <Globe2 className="text-muted-foreground h-4 w-4" />
+              <span className="font-medium">WireGuard tunnels - your own country exits</span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Paste a standard wg-quick config (Mullvad / ProtonVPN / Windscribe / your own VPS). It appears as a
+              "[WG]" option on every inbound below - real country IP, WireGuard speed.
+            </p>
+            {wgTunnels.length > 0 && (
+              <div className="mt-2 grid gap-1">
+                {wgTunnels.map(t => (
+                  <div key={t.slug} className="bg-muted/40 flex flex-wrap items-center gap-2 rounded px-2 py-1.5 text-xs">
+                    <span className="font-medium">WG: {t.name}</span>
+                    <span className="text-muted-foreground">{t.endpoint}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      disabled={wgPing[t.slug]?.fetching}
+                      onClick={async () => {
+                        setWgPing(p => ({ ...p, [t.slug]: { ...p[t.slug], fetching: true } }))
+                        try {
+                          const res = (await pingWgTunnel(t.slug)) as { ok: boolean; latency?: number; error?: string }
+                          setWgPing(p => ({ ...p, [t.slug]: { ok: res.ok, latency: (res as any).latency, error: (res as any).error } }))
+                        } catch {
+                          setWgPing(p => ({ ...p, [t.slug]: { ok: false, error: 'failed' } }))
+                        }
+                      }}
+                    >
+                      ping
+                    </Button>
+                    {wgPing[t.slug] && (
+                      <span className={wgPing[t.slug].ok ? 'text-green-600' : 'text-amber-600' }>
+                        {wgPing[t.slug].ok ? `${wgPing[t.slug].latency} ms` : wgPing[t.slug].error}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive ml-auto h-6 px-2"
+                      disabled={removeWgMutation.isPending}
+                      onClick={async () => {
+                        try {
+                          await removeWgMutation.mutateAsync({ slug: t.slug })
+                          toast.success(`WG tunnel "${t.name}" removed`)
+                          await wgQuery.refetch()
+                        } catch {
+                          toast.error('Failed to remove')
+                        }
+                      }}
+                    >
+                      remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 grid gap-2">
+              <Input placeholder="Name (e.g. Mullvad DE 1)" value={wgName} onChange={(e: ChangeEvent<HTMLInputElement>) => setWgName(e.target.value)} />
+              <textarea
+                className="border-input bg-background min-h-28 rounded-md border px-3 py-2 font-mono text-xs"
+                placeholder={"[Interface] PrivateKey / Address ... [Peer] PublicKey / AllowedIPs / Endpoint - standard wg-quick format"}
+                value={wgConfig}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setWgConfig(e.target.value)}
+              />
+              <Button
+                size="sm"
+                className="justify-self-start"
+                disabled={importWgMutation.isPending || !wgName.trim() || !wgConfig.trim()}
+                onClick={async () => {
+                  try {
+                    const res = await importWgMutation.mutateAsync({ data: { name: wgName.trim(), config_text: wgConfig } })
+                    toast.success(`WG tunnel "${res.name}" imported`)
+                    setWgName('')
+                    setWgConfig('')
+                    await wgQuery.refetch()
+                  } catch (e: any) {
+                    const detail = e?.response?._data?.detail || e?.message
+                    toast.error(typeof detail === 'string' ? detail : 'Import failed - check the config')
+                  }
+                }}
+              >
+                {importWgMutation.isPending ? 'Importing…' : 'Import tunnel'}
+              </Button>
+            </div>
           </div>
 
           {status.installed && (
