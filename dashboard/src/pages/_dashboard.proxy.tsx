@@ -5,9 +5,13 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
+  Link as LinkIcon,
   Pencil,
   QrCode,
   RefreshCcw,
+  Server as ServerIcon,
   Trash2,
   UserPlus,
 } from 'lucide-react'
@@ -165,6 +169,13 @@ export default function ProxyPage() {
   const [proxyForm, setProxyForm] = useState<ProxyFormValue>(emptyProxyForm)
   const [qrLink, setQrLink] = useState<string | null>(null)
   const [deleteProxyTarget, setDeleteProxyTarget] = useState<MtprotoProxyResponse | null>(null)
+  const [proxySearch, setProxySearch] = useState('')
+  const [proxySort, setProxySort] = useState<{ key: 'name' | 'server' | 'port' | 'node'; dir: 1 | -1 }>({
+    key: 'name',
+    dir: 1,
+  })
+  const [groupByServer, setGroupByServer] = useState(true)
+  const [revealedSecrets, setRevealedSecrets] = useState<number[]>([])
 
   // --- client state
   const [clientSearch, setClientSearch] = useState('')
@@ -366,6 +377,43 @@ export default function ProxyPage() {
     return q ? clients.filter((c) => c.username.toLowerCase().includes(q)) : clients
   }, [clients, clientSearch])
 
+  // ------------------------------------------------------- proxy table logic
+  const nodeName = (id?: number | null) =>
+    id ? (nodes.find((n: { id: number; name: string }) => n.id === id)?.name ?? `node #${id}`) : '—'
+
+  const sortedProxies = useMemo(() => {
+    const q = proxySearch.trim().toLowerCase()
+    const list = q ? proxies.filter((p) => `${p.name} ${p.server}`.toLowerCase().includes(q)) : [...proxies]
+    list.sort((a, b) => {
+      if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
+      const { key, dir } = proxySort
+      const av = key === 'node' ? nodeName(a.node_id) : String(a[key])
+      const bv = key === 'node' ? nodeName(b.node_id) : String(b[key])
+      return av.localeCompare(bv) * dir
+    })
+    return list
+  }, [proxies, proxySearch, proxySort, nodes])
+
+  const serverGroups = useMemo(() => {
+    if (!groupByServer) return [{ server: '', proxies: sortedProxies }]
+    const map = new Map<string, MtprotoProxyResponse[]>()
+    for (const p of sortedProxies) {
+      const key = nodeName(p.node_id) === '—' ? 'This panel server (local mtg)' : nodeName(p.node_id)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(p)
+    }
+    return [...map.entries()].map(([server, list]) => ({ server, proxies: list }))
+  }, [sortedProxies, groupByServer, nodes])
+
+  const toggleSort = (key: 'name' | 'server' | 'port' | 'node') =>
+    setProxySort((s) => (s.key === key ? { key, dir: (s.dir * -1) as 1 | -1 } : { key, dir: 1 }))
+
+  const sortIcon = (key: 'name' | 'server' | 'port' | 'node') =>
+    proxySort.key === key ? (proxySort.dir === 1 ? ' ▲' : ' ▼') : ''
+
+  const toggleReveal = (id: number) =>
+    setRevealedSecrets((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+
   const groupBadge = (ids?: number[] | null) =>
     (ids ?? [])
       .map((id) => groups.find((g: { id: number; name: string }) => g.id === id))
@@ -519,13 +567,23 @@ export default function ProxyPage() {
 
         {/* ------------------------------------------------ Proxies tab */}
         <TabsContent value="proxies" className="mt-3">
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <Button onClick={openProxyCreate} size="sm">
               <QrCode className="h-4 w-4" /> Add Proxy
             </Button>
-            <p className="text-muted-foreground text-xs">
-              Enabled proxies appear on the subscription page of clients whose group matches.
-            </p>
+            <Input
+              value={proxySearch}
+              onChange={(e) => setProxySearch(e.target.value)}
+              placeholder="Search proxies…"
+              className="max-w-56"
+            />
+            <label className="text-muted-foreground flex cursor-pointer items-center gap-1.5 text-xs">
+              <input type="checkbox" checked={groupByServer} onChange={(e) => setGroupByServer(e.target.checked)} />
+              group by server
+            </label>
+            <Badge variant="outline" className="border-violet-500/40 text-violet-500">
+              MTProto inbound — separate from config inbounds (VLESS/VMess)
+            </Badge>
           </div>
 
           {proxiesLoading ? (
@@ -533,78 +591,168 @@ export default function ProxyPage() {
           ) : proxies.length === 0 ? (
             <Card>
               <CardContent className="text-muted-foreground p-10 text-center text-sm">
-                No Telegram proxies yet — click "Add Proxy" to create one, then share the link with your clients.
+                No Telegram proxies yet — click "Add Proxy" to create one (enter the secret from `drvpn
+                install-mtproto` or leave it empty to auto-generate), and edit it any time.
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {proxies.map((proxy) => (
-                <Card key={proxy.id}>
-                  <CardContent className="flex flex-col gap-2 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className={
-                            proxy.enabled
-                              ? 'h-2 w-2 shrink-0 rounded-full bg-green-500'
-                              : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'
-                          }
-                        />
-                        <span className="truncate font-medium">{proxy.name}</span>
-                        <span className="text-muted-foreground truncate text-xs">
-                          {proxy.server}:{proxy.port}
-                        </span>
-                        {proxy.node_id && (
-                          <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">node #{proxy.node_id}</span>
-                        )}
-                        {proxy.group_id && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            {groups.find((g: { id: number }) => g.id === proxy.group_id)?.name ?? `group ${proxy.group_id}`}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleProxyEnabled(proxy, v)} />
-                        <Button variant="ghost" size="icon" title="Edit" onClick={() => openProxyEdit(proxy)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setQrLink(tgLink(proxy))}>
-                          <QrCode className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteProxyTarget(proxy)}>
-                          <Trash2 className="text-destructive h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {proxy.sponsored_channel && (
-                      <p className="text-muted-foreground truncate text-xs">Sponsored: {proxy.sponsored_channel}</p>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={async () => {
-                          await copy(tgLink(proxy))
-                          toast.success('tg:// link copied')
-                        }}
-                      >
-                        <Copy className="h-3 w-3" /> tg:// link
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={async () => {
-                          await copy(httpsLink(proxy))
-                          toast.success('https link copied')
-                        }}
-                      >
-                        <Copy className="h-3 w-3" /> https link
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="grid gap-4">
+              {serverGroups.map(({ server, proxies: groupList }) => (
+                <div key={server || 'all'}>
+                  {server && (
+                    <p className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                      <ServerIcon className="h-3.5 w-3.5" /> {server}
+                    </p>
+                  )}
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-muted-foreground border-b text-left text-xs">
+                        <th
+                          className="cursor-pointer py-2 pl-2"
+                          onClick={() => toggleSort('name')}
+                          title="Sort by name"
+                        >
+                          Name{sortIcon('name')}
+                        </th>
+                        <th className="cursor-pointer" onClick={() => toggleSort('server')} title="Sort by server">
+                          Server{sortIcon('server')}
+                        </th>
+                        <th className="cursor-pointer" onClick={() => toggleSort('port')} title="Sort by port">
+                          Port{sortIcon('port')}
+                        </th>
+                        <th className="cursor-pointer" onClick={() => toggleSort('node')} title="Sort by node">
+                          Node{sortIcon('node')}
+                        </th>
+                        <th>Group</th>
+                        <th>Secret</th>
+                        <th className="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupList.map((proxy) => (
+                        <tr key={proxy.id} className="border-b">
+                          <td className="py-2 pl-2">
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={
+                                  proxy.enabled
+                                    ? 'h-2 w-2 shrink-0 rounded-full bg-green-500'
+                                    : 'h-2 w-2 shrink-0 rounded-full bg-zinc-400'
+                                }
+                              />
+                              <span className="font-medium">{proxy.name}</span>
+                              <Switch checked={!!proxy.enabled} onCheckedChange={(v) => toggleProxyEnabled(proxy, v)} />
+                            </span>
+                          </td>
+                          <td className="text-muted-foreground">{proxy.server}</td>
+                          <td>{proxy.port}</td>
+                          <td className="text-muted-foreground">{nodeName(proxy.node_id)}</td>
+                          <td>
+                            {proxy.group_id ? (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {groups.find((g: { id: number }) => g.id === proxy.group_id)?.name ??
+                                  `group ${proxy.group_id}`}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">all</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="flex items-center gap-1">
+                              <code
+                                className="bg-muted max-w-40 truncate rounded px-1.5 py-0.5 text-[11px]"
+                                title={revealedSecrets.includes(proxy.id) ? fullSecret(proxy) : 'click reveal'}
+                              >
+                                {revealedSecrets.includes(proxy.id)
+                                  ? fullSecret(proxy)
+                                  : `••••••${proxy.secret.slice(-6)}`}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Reveal / hide"
+                                onClick={() => toggleReveal(proxy.id)}
+                              >
+                                {revealedSecrets.includes(proxy.id) ? (
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Eye className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Copy full secret"
+                                onClick={async () => {
+                                  await copy(fullSecret(proxy))
+                                  toast.success('Secret copied')
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </span>
+                          </td>
+                          <td>
+                            <span className="flex items-center justify-end gap-1 pr-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Copy tg:// link"
+                                onClick={async () => {
+                                  await copy(tgLink(proxy))
+                                  toast.success('tg:// link copied')
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Copy https://t.me link"
+                                onClick={async () => {
+                                  await copy(httpsLink(proxy))
+                                  toast.success('https link copied')
+                                }}
+                              >
+                                <LinkIcon className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="QR"
+                                onClick={() => setQrLink(tgLink(proxy))}
+                              >
+                                <QrCode className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Edit (secret, server, port… all editable)"
+                                onClick={() => openProxyEdit(proxy)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setDeleteProxyTarget(proxy)}
+                              >
+                                <Trash2 className="text-destructive h-3.5 w-3.5" />
+                              </Button>
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ))}
             </div>
           )}
@@ -752,6 +900,12 @@ export default function ProxyPage() {
                   <RefreshCcw className="h-4 w-4" />
                 </Button>
               </div>
+              {editingProxy && proxyForm.secret.trim() && proxyForm.secret.trim() !== editingProxy.secret && (
+                <p className="text-amber-500 text-[11px]">
+                  The secret changed — links already shared for "{editingProxy.name}" stop working. Share the new
+                  tg:// link after saving.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1">

@@ -1,7 +1,7 @@
 {
   "name": "drvpn-dashboard",
   "private": true,
-  "version": "0.1.11",
+  "version": "0.1.12",
   "engines": {
     "node": ">=22.18.0"
   },

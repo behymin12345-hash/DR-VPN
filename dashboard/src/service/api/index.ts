@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.10
+ * OpenAPI spec version: 0.1.11
  */
 import {
   useMutation,
@@ -2471,6 +2471,46 @@ export interface SettingsSchema {
   hwid?: HWIDSettings | null;
   general?: General | null;
   cleanup?: CleanupSettings | null;
+}
+
+export interface SmartSetupInboundReport {
+  tag: string;
+  port: number;
+  protocol: string;
+  security: string;
+  remark: string;
+}
+
+export interface SmartSetupRequest {
+  /**
+     * @minLength 4
+     * @maxLength 253
+     */
+  domain: string;
+  /**
+     * @minimum 1
+     * @maximum 65535
+     */
+  base_port?: number;
+  node_id?: number | null;
+  include_vmess?: boolean | null;
+}
+
+export interface SmartSetupResponse {
+  ok: boolean;
+  profile: string;
+  profile_reason: string;
+  node_latency_ms?: number | null;
+  internet_latency_ms?: number | null;
+  core_id: number;
+  core_name: string;
+  group_id: number;
+  group_name: string;
+  host_count: number;
+  inbounds: SmartSetupInboundReport[];
+  ports_to_open: number[];
+  security_notes?: string[];
+  warnings?: string[];
 }
 
 export interface SubscriptionUserResponse {
@@ -8329,6 +8369,79 @@ export function useGetWorkersHealth<TData = Awaited<ReturnType<typeof getWorkers
 
 
 
+
+export const getRunSmartSetupUrl = () => {
+
+
+
+
+  return `/api/smart_setup`
+}
+
+/**
+ * One-shot secure stack: measures latency, picks a profile, generates a
+ * REALITY keypair and creates the core config + group + hosts.
+ * @summary Run Smart Setup
+ */
+export const runSmartSetup = async (smartSetupRequest: SmartSetupRequest, options?: RequestInit): Promise<SmartSetupResponse> => {
+
+  return orvalFetcher<SmartSetupResponse>(getRunSmartSetupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(smartSetupRequest)
+  }
+);}
+
+
+
+
+
+export const getRunSmartSetupMutationOptions = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSmartSetup>>, TError,{data: BodyType<SmartSetupRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof runSmartSetup>>, TError,{data: BodyType<SmartSetupRequest>}, TContext> => {
+
+const mutationKey = ['runSmartSetup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runSmartSetup>>, {data: BodyType<SmartSetupRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  runSmartSetup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunSmartSetupMutationResult = NonNullable<Awaited<ReturnType<typeof runSmartSetup>>>
+    export type RunSmartSetupMutationBody = BodyType<SmartSetupRequest>
+    export type RunSmartSetupMutationError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>
+
+    /**
+ * @summary Run Smart Setup
+ */
+export const useRunSmartSetup = <TError = ErrorType<Unauthorized | Forbidden | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSmartSetup>>, TError,{data: BodyType<SmartSetupRequest>}, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof runSmartSetup>>,
+        TError,
+        {data: BodyType<SmartSetupRequest>},
+        TContext
+      > => {
+      return useMutation(getRunSmartSetupMutationOptions(options), queryClient);
+    }
 
 export const getGetSettingsUrl = () => {
 

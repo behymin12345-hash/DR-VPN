@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import Cores from '@/features/nodes/components/cores/cores-list'
+import { SmartSetupButton } from '@/features/nodes/components/cores/smart-setup-dialog'
 import { useGetAllCores, useDeleteCoreConfig, useCreateCoreConfig } from '@/service/api'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -143,6 +144,11 @@ export default function CoresIndexPage() {
 
   return (
     <div className="flex flex-col px-4">
+      {canCreateCores && (
+        <div className="mb-3 flex justify-end">
+          <SmartSetupButton canCreate={canCreateCores} />
+        </div>
+      )}
       <Cores
         cores={cores}
         onDuplicateCore={canCreateCores ? handleDuplicateCore : undefined}
