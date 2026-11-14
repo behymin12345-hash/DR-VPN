@@ -1,8 +1,10 @@
 import asyncio
 import time
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from app.db import AsyncSession, get_db
 from app.db.crud.wireguard import get_subnet_usage
@@ -55,6 +57,83 @@ async def get_system_resource_stats(
 ):
     """Fetch system resource stats without user metrics."""
     return await system_operator.get_system_resource_stats()
+
+
+class UpdateCheckResponse(BaseModel):
+    """Server-side GitHub release check.
+
+    The dashboard must not query api.github.com itself — it is blocked for
+    many users' browsers (e.g. Iran), which silently killed the update
+    banner. The panel host reaches GitHub freely, so it checks for us.
+    """
+
+    current_version: str
+    latest_version: str | None = None
+    update_available: bool = False
+    release_url: str | None = None
+    error: str | None = None
+
+
+_UPDATE_CHECK_CACHE: dict[str, Any] = {"at": 0.0, "data": None}
+UPDATE_CHECK_OK_TTL = 1800.0
+UPDATE_CHECK_ERR_TTL = 300.0
+_UPDATE_REPO_API = "https://api.github.com/repos/behymin12345-hash/DR-VPN/releases/latest"
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    import re as _re
+
+    parts = _re.findall(r"\d+", version)
+    return tuple(int(p) for p in parts[:3])
+
+
+@router.get("/system/update-check", response_model=UpdateCheckResponse)
+async def system_update_check(
+    _: AdminDetails = Depends(require_permission("system", "read")),
+):
+    """Compare this panel's version with the latest GitHub release (30 min cache)."""
+    from app import __version__
+
+    now = time.monotonic()
+    cached = _UPDATE_CHECK_CACHE["data"]
+    ttl = UPDATE_CHECK_OK_TTL if cached and cached.get("latest_version") else UPDATE_CHECK_ERR_TTL
+    if cached is not None and now - _UPDATE_CHECK_CACHE["at"] < ttl:
+        return UpdateCheckResponse(**cached)
+
+    latest: str | None = None
+    url: str | None = None
+    error: str | None = None
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(_UPDATE_REPO_API, headers={"Accept": "application/vnd.github+json"})
+        if resp.status_code == 200:
+            data = resp.json()
+            latest = (data.get("tag_name") or "").lstrip("v") or None
+            url = data.get("html_url")
+        else:
+            error = f"github api status {resp.status_code}"
+    except Exception as exc:
+        error = f"{exc.__class__.__name__}"
+
+    update_available = False
+    if latest:
+        try:
+            update_available = _version_tuple(latest) > _version_tuple(__version__)
+        except ValueError:
+            update_available = False
+
+    payload = {
+        "current_version": __version__,
+        "latest_version": latest,
+        "update_available": update_available,
+        "release_url": url,
+        "error": error,
+    }
+    _UPDATE_CHECK_CACHE["data"] = payload
+    _UPDATE_CHECK_CACHE["at"] = now
+    return UpdateCheckResponse(**payload)
 
 
 @router.get("/system/users", response_model=SystemUsersStats)

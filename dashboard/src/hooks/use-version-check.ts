@@ -1,10 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-
-interface CachedRelease {
-  version: string
-  url: string
-  timestamp: number
-}
+import { useSystemUpdateCheck } from '@/service/api'
 
 interface VersionCheckResult {
   hasUpdate: boolean
@@ -18,97 +12,35 @@ interface UseVersionCheckOptions {
   enabled?: boolean
 }
 
-const GITHUB_API_URL = 'https://api.github.com/repos/behymin12345-hash/DR-VPN/releases/latest'
-const CACHE_KEY = 'drvpn_release'
-const CACHE_DURATION = 10 * 60 * 1000
+const CHECK_STALE_TIME = 10 * 60 * 1000
 
-function compareVersions(current: string, latest: string): number {
-  const currentParts = current.replace(/^v/, '').split('.').map(Number)
-  const latestParts = latest.replace(/^v/, '').split('.').map(Number)
-
-  for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-    const curr = currentParts[i] || 0
-    const lat = latestParts[i] || 0
-    if (curr < lat) return -1
-    if (curr > lat) return 1
-  }
-  return 0
-}
-
-function getCached(): CachedRelease | null {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY)
-    if (!cached) return null
-    return JSON.parse(cached)
-  } catch {
-    return null
-  }
-}
-
-function setCache(version: string, url: string): void {
-  try {
-    const data: CachedRelease = { version, url, timestamp: Date.now() }
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data))
-  } catch {
-    return
-  }
-}
-
-async function fetchLatestRelease(): Promise<{ version: string; url: string } | null> {
-  // No public DR-VPN repository yet — report "no update" instead of querying upstream.
-  if (!GITHUB_API_URL) return null
-
-  const cached = getCached()
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return { version: cached.version, url: cached.url }
-  }
-
-  try {
-    const response = await fetch(GITHUB_API_URL, {
-      referrerPolicy: 'no-referrer',
-      credentials: 'omit',
-      headers: { Accept: 'application/vnd.github.v3+json' },
-    })
-
-    if (!response.ok) {
-      return cached ? { version: cached.version, url: cached.url } : null
-    }
-
-    const data = await response.json()
-    const version = data.tag_name?.replace(/^v/, '') || ''
-    const url = data.html_url || ''
-
-    if (version) setCache(version, url)
-    return { version, url }
-  } catch {
-    return cached ? { version: cached.version, url: cached.url } : null
-  }
-}
-
-export function useVersionCheck(currentVersion: string | null, options: UseVersionCheckOptions = {}): VersionCheckResult {
+/**
+ * Update check backed by the panel itself (`GET /api/system/update-check`).
+ *
+ * The panel fetches the latest GitHub release server-side and caches it for
+ * 30 minutes: browsers in censored networks (e.g. Iran) cannot reach
+ * api.github.com, which silently disabled the old client-side check.
+ */
+export function useVersionCheck(_currentVersion: string | null, options: UseVersionCheckOptions = {}): VersionCheckResult {
+  void _currentVersion // the comparison happens server-side against the running panel version
   const enabled = options.enabled ?? true
-  const { data, isLoading } = useQuery({
-    queryKey: ['github-release-check'],
-    queryFn: fetchLatestRelease,
-    enabled,
-    staleTime: CACHE_DURATION,
-    gcTime: CACHE_DURATION * 2,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchInterval: CACHE_DURATION,
-    retry: 1,
+  const { data, isLoading } = useSystemUpdateCheck({
+    query: {
+      enabled,
+      staleTime: CHECK_STALE_TIME,
+      gcTime: CHECK_STALE_TIME * 2,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchInterval: CHECK_STALE_TIME,
+      retry: 1,
+    },
   })
 
-  const latestVersion = data?.version || null
-  const cleanCurrentVersion = currentVersion?.replace(/^v/, '') || null
-
-  const hasUpdate = enabled && !!(cleanCurrentVersion && latestVersion && compareVersions(cleanCurrentVersion, latestVersion) < 0)
-
   return {
-    hasUpdate,
-    latestVersion: enabled ? latestVersion : null,
-    currentVersion: cleanCurrentVersion,
-    releaseUrl: enabled ? data?.url || null : null,
+    hasUpdate: !!data?.update_available,
+    latestVersion: data?.latest_version ?? null,
+    currentVersion: data?.current_version ?? null,
+    releaseUrl: data?.release_url ?? null,
     isLoading: enabled ? isLoading : false,
   }
 }

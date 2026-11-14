@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Globe2, MapPin, Search } from 'lucide-react'
+import { Globe2, MapPin, Search, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 import PageHeader from '@/components/layout/page-header'
@@ -20,9 +20,12 @@ import {
   CoreResponse,
 } from '@/service/api'
 import { BALANCER_PORT, LOCATIONS, ccFlag, OUTBOUND_PREFIX } from '@/constants/locations'
+import { useGetWarp, useRegisterWarpDevice, useRemoveWarpDevice } from '@/service/api'
 import { cn } from '@/lib/utils'
 
 type Binding = Record<string, string> // inboundTag -> location value ('' | 'balancer' | 'T01' | 'P05' ...)
+
+const WARP_OUTBOUND_TAG = 'warp-cloudflare'
 
 const INSTALL_CMD = 'sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/mrmarzx/Tor-ML-PRO/4.4/tor-ml.sh | tr -d \'\\r\')" -- --install'
 
@@ -54,6 +57,11 @@ export default function LocationsPage() {
   const stopMutation = useStopLocations()
   const installMutation = useInstallTorMl()
   const modifyCore = useModifyCoreConfig()
+  const warpQuery = useGetWarp()
+  const warpRegistered = !!warpQuery.data?.registered
+  const warpOutbound = warpQuery.data?.outbound ?? null
+  const registerWarpMutation = useRegisterWarpDevice()
+  const removeWarpMutation = useRemoveWarpDevice()
 
   useEffect(() => {
     if (nodeId === null && nodes.length > 0) setNodeId(nodes[0].id)
@@ -79,6 +87,7 @@ export default function LocationsPage() {
         if (!tag.startsWith(OUTBOUND_PREFIX)) continue
         let value = ''
         if (tag === OUTBOUND_PREFIX + 'auto') value = 'balancer'
+        else if (tag === WARP_OUTBOUND_TAG) value = 'warp'
         else {
           const port = Number(ob.settings?.servers?.[0]?.port ?? 0)
           const loc = LOCATIONS.find(l => l.port === port)
@@ -153,11 +162,11 @@ export default function LocationsPage() {
     try {
       const config = JSON.parse(JSON.stringify(core.config)) as Record<string, any>
       config.outbounds = (config.outbounds ?? []).filter(
-        (o: any) => !String(o.tag ?? '').startsWith(OUTBOUND_PREFIX),
+        (o: any) => !String(o.tag ?? '').startsWith(OUTBOUND_PREFIX) && String(o.tag ?? '') !== WARP_OUTBOUND_TAG,
       )
       config.routing = config.routing ?? { rules: [] }
       config.routing.rules = (config.routing.rules ?? []).filter(
-        (r: any) => !String(r.outboundTag ?? '').startsWith(OUTBOUND_PREFIX),
+        (r: any) => !String(r.outboundTag ?? '').startsWith(OUTBOUND_PREFIX) && String(r.outboundTag ?? '') !== WARP_OUTBOUND_TAG,
       )
 
       const usedValues = new Set<string>()
@@ -166,6 +175,15 @@ export default function LocationsPage() {
         if (v) usedValues.add(v)
       }
       const outboundsByValue = new Map<string, string>()
+      if (usedValues.has('warp')) {
+        if (!warpRegistered || !warpOutbound) {
+          toast.error('Cloudflare WARP is not registered yet — press Register WARP first')
+          setSaving(false)
+          return
+        }
+        outboundsByValue.set('warp', WARP_OUTBOUND_TAG)
+        config.outbounds.push({ ...warpOutbound, tag: WARP_OUTBOUND_TAG })
+      }
       for (const v of usedValues) {
         const ob = valueToOutbound(v)
         if (!ob) continue
@@ -276,6 +294,55 @@ export default function LocationsPage() {
             )}
           </div>
 
+          {/* Cloudflare WARP — a location provider beyond Tor/Psiphon */}
+          <div className="border-violet-500/30 bg-violet-500/5 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <Zap className="text-violet-500 h-4 w-4" />
+              <div>
+                <span className="font-medium">Cloudflare WARP</span>
+                <p className="text-muted-foreground text-xs">
+                  {warpRegistered
+                    ? `registered (device ${String(warpQuery.data?.device_id ?? '').slice(0, 8)}…) — pick "Cloudflare WARP" on any inbound below`
+                    : 'not registered — a fast Cloudflare exit next to Tor/Psiphon (no country pin)'}
+                </p>
+              </div>
+            </div>
+            {warpRegistered ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={removeWarpMutation.isPending}
+                onClick={async () => {
+                  try {
+                    await removeWarpMutation.mutateAsync(undefined)
+                    toast.success('WARP registration removed')
+                    await warpQuery.refetch()
+                  } catch {
+                    toast.error('Failed to unregister')
+                  }
+                }}
+              >
+                Unregister
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                disabled={registerWarpMutation.isPending}
+                onClick={async () => {
+                  try {
+                    await registerWarpMutation.mutateAsync(undefined)
+                    toast.success('WARP registered — you can now bind it to any inbound')
+                    await warpQuery.refetch()
+                  } catch {
+                    toast.error('Registration failed — is api.cloudflareclient.com reachable from this server?')
+                  }
+                }}
+              >
+                {registerWarpMutation.isPending ? 'Registering…' : 'Register WARP'}
+              </Button>
+            )}
+          </div>
+
           {status.installed && (
             <div className="mt-4 flex flex-col gap-3">
               <div className="relative">
@@ -362,6 +429,7 @@ export default function LocationsPage() {
                     onChange={e => setBinding(b => ({ ...b, [tag]: e.target.value }))}
                   >
                     <option value="">Direct (no location)</option>
+                    <option value="warp" disabled={!warpRegistered}>{warpRegistered ? "🟣 Cloudflare WARP (fast exit)" : "🟣 Cloudflare WARP (register first)"}</option>
                     <option value="balancer">⚡ Auto Balancer (best ping)</option>
                     <optgroup label="Tor (60)">
                       {(grouped.tor as { id: string; cc: string; name: string; port: number }[]).map((l: { id: string; cc: string; name: string; port: number }) => (

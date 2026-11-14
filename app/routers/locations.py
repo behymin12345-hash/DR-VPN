@@ -223,3 +223,65 @@ async def set_mode(
 ):
     ok, out = await _run_tor(["--mode", body.mode], timeout=20)
     return {"ok": ok, "mode": body.mode, "output": out[:200]}
+
+
+# ---------------------------------------------------------------------------
+# Cloudflare WARP — a location provider that is not tor-ml: a WireGuard
+# tunnel to Cloudflare's anycast edge. Fast, no country pin, ideal as an
+# unblocking hop next to Tor/Psiphon.
+# ---------------------------------------------------------------------------
+
+
+class WarpOutboundResponse(BaseModel):
+    registered: bool
+    device_id: str | None = None
+    outbound: dict | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+@router.get("/warp", response_model=WarpOutboundResponse)
+async def get_warp(
+    _: AdminDetails = Depends(require_permission("settings", "read")),
+):
+    from app.operation.warp import build_warp_outbound, load_warp_state
+
+    state = load_warp_state()
+    if not state:
+        return WarpOutboundResponse(registered=False)
+    return WarpOutboundResponse(
+        registered=True,
+        device_id=state.get("device_id"),
+        outbound=build_warp_outbound(state),
+        warnings=["Open UDP 2408 outbound on your firewall/Security Group for the WARP tunnel."],
+    )
+
+
+@router.post("/warp", response_model=WarpOutboundResponse)
+async def register_warp_device(
+    _: AdminDetails = Depends(require_permission("settings", "update")),
+):
+    """Register a Cloudflare WARP device (idempotent) and return its wireguard outbound."""
+    from app.operation.warp import build_warp_outbound, register_warp
+
+    try:
+        state = await register_warp()
+    except Exception as exc:
+        logger.error(f"WARP registration failed: {exc}")
+        raise HTTPExceptionServiceUnavailable(f"WARP registration failed: {exc}")
+    return WarpOutboundResponse(
+        registered=True,
+        device_id=state.get("device_id"),
+        outbound=build_warp_outbound(state),
+        warnings=["Open UDP 2408 outbound on your firewall/Security Group for the WARP tunnel."],
+    )
+
+
+@router.delete("/warp")
+async def remove_warp_device(
+    _: AdminDetails = Depends(require_permission("settings", "update")),
+):
+    """Forget the local WARP registration (the device stays on Cloudflare's side)."""
+    from app.operation.warp import remove_warp_state
+
+    removed = remove_warp_state()
+    return {"ok": True, "removed": removed}

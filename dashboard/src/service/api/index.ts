@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.11
+ * OpenAPI spec version: 0.1.13
  */
 import {
   useMutation,
@@ -2593,6 +2593,21 @@ export interface Unauthorized {
   detail?: string;
 }
 
+/**
+ * Server-side GitHub release check.
+ *
+ * The dashboard must not query api.github.com itself — it is blocked for
+ * many users' browsers (e.g. Iran), which silently killed the update
+ * banner. The panel host reaches GitHub freely, so it checks for us.
+ */
+export interface UpdateCheckResponse {
+  current_version: string;
+  latest_version?: string | null;
+  update_available?: boolean;
+  release_url?: string | null;
+  error?: string | null;
+}
+
 export type UsageTable = typeof UsageTable[keyof typeof UsageTable];
 
 
@@ -2921,6 +2936,15 @@ export interface UsersResponse {
 export interface UsersSimpleResponse {
   users: UserSimple[];
   total: number;
+}
+
+export type WarpOutboundResponseOutbound = { [key: string]: unknown } | null;
+
+export interface WarpOutboundResponse {
+  registered: boolean;
+  device_id?: string | null;
+  outbound?: WarpOutboundResponseOutbound;
+  warnings?: string[];
 }
 
 export interface WireGuardSubnetUsage {
@@ -7854,6 +7878,108 @@ export function useGetSystemResourceStats<TData = Awaited<ReturnType<typeof getS
 
 
 
+export const getSystemUpdateCheckUrl = () => {
+
+
+
+
+  return `/api/system/update-check`
+}
+
+/**
+ * Compare this panel's version with the latest GitHub release (30 min cache).
+ * @summary System Update Check
+ */
+export const systemUpdateCheck = async ( options?: RequestInit): Promise<UpdateCheckResponse> => {
+
+  return orvalFetcher<UpdateCheckResponse>(getSystemUpdateCheckUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSystemUpdateCheckQueryKey = () => {
+    return [
+    `/api/system/update-check`
+    ] as const;
+    }
+
+
+export const getSystemUpdateCheckQueryOptions = <TData = Awaited<ReturnType<typeof systemUpdateCheck>>, TError = ErrorType<Unauthorized>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSystemUpdateCheckQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof systemUpdateCheck>>> = ({ signal }) => systemUpdateCheck({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SystemUpdateCheckQueryResult = NonNullable<Awaited<ReturnType<typeof systemUpdateCheck>>>
+export type SystemUpdateCheckQueryError = ErrorType<Unauthorized>
+
+
+export function useSystemUpdateCheck<TData = Awaited<ReturnType<typeof systemUpdateCheck>>, TError = ErrorType<Unauthorized>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof systemUpdateCheck>>,
+          TError,
+          Awaited<ReturnType<typeof systemUpdateCheck>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSystemUpdateCheck<TData = Awaited<ReturnType<typeof systemUpdateCheck>>, TError = ErrorType<Unauthorized>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof systemUpdateCheck>>,
+          TError,
+          Awaited<ReturnType<typeof systemUpdateCheck>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSystemUpdateCheck<TData = Awaited<ReturnType<typeof systemUpdateCheck>>, TError = ErrorType<Unauthorized>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary System Update Check
+ */
+
+export function useSystemUpdateCheck<TData = Awaited<ReturnType<typeof systemUpdateCheck>>, TError = ErrorType<Unauthorized>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemUpdateCheck>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getSystemUpdateCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetSystemUsersStatsUrl = (params?: GetSystemUsersStatsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -11867,6 +11993,10 @@ export const getInstallTorMlUrl = () => {
 
 /**
  * Install tor-ml on this server (the panel server itself). Long-running.
+ *
+ * Always re-applies the DR-VPN RAM/ping tune afterwards — including on an
+ * already-installed CLI, so clicking Install again on an old install also
+ * upgrades it.
  * @summary Install Tor Ml
  */
 export const installTorMl = async ( options?: RequestInit): Promise<unknown> => {
@@ -12241,6 +12371,251 @@ export const useSetMode = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getSetModeMutationOptions(options), queryClient);
+    }
+
+export const getGetWarpUrl = () => {
+
+
+
+
+  return `/api/locations/warp`
+}
+
+/**
+ * @summary Get Warp
+ */
+export const getWarp = async ( options?: RequestInit): Promise<WarpOutboundResponse> => {
+
+  return orvalFetcher<WarpOutboundResponse>(getGetWarpUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWarpQueryKey = () => {
+    return [
+    `/api/locations/warp`
+    ] as const;
+    }
+
+
+export const getGetWarpQueryOptions = <TData = Awaited<ReturnType<typeof getWarp>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWarpQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWarp>>> = ({ signal }) => getWarp({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWarpQueryResult = NonNullable<Awaited<ReturnType<typeof getWarp>>>
+export type GetWarpQueryError = ErrorType<unknown>
+
+
+export function useGetWarp<TData = Awaited<ReturnType<typeof getWarp>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWarp>>,
+          TError,
+          Awaited<ReturnType<typeof getWarp>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWarp<TData = Awaited<ReturnType<typeof getWarp>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWarp>>,
+          TError,
+          Awaited<ReturnType<typeof getWarp>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWarp<TData = Awaited<ReturnType<typeof getWarp>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Warp
+ */
+
+export function useGetWarp<TData = Awaited<ReturnType<typeof getWarp>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarp>>, TError, TData>>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWarpQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRegisterWarpDeviceUrl = () => {
+
+
+
+
+  return `/api/locations/warp`
+}
+
+/**
+ * Register a Cloudflare WARP device (idempotent) and return its wireguard outbound.
+ * @summary Register Warp Device
+ */
+export const registerWarpDevice = async ( options?: RequestInit): Promise<WarpOutboundResponse> => {
+
+  return orvalFetcher<WarpOutboundResponse>(getRegisterWarpDeviceUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegisterWarpDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerWarpDevice>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerWarpDevice>>, TError,void, TContext> => {
+
+const mutationKey = ['registerWarpDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerWarpDevice>>, void> = () => {
+
+
+          return  registerWarpDevice(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterWarpDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof registerWarpDevice>>>
+
+    export type RegisterWarpDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register Warp Device
+ */
+export const useRegisterWarpDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerWarpDevice>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof registerWarpDevice>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRegisterWarpDeviceMutationOptions(options), queryClient);
+    }
+
+export const getRemoveWarpDeviceUrl = () => {
+
+
+
+
+  return `/api/locations/warp`
+}
+
+/**
+ * Forget the local WARP registration (the device stays on Cloudflare's side).
+ * @summary Remove Warp Device
+ */
+export const removeWarpDevice = async ( options?: RequestInit): Promise<unknown> => {
+
+  return orvalFetcher<unknown>(getRemoveWarpDeviceUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveWarpDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeWarpDevice>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeWarpDevice>>, TError,void, TContext> => {
+
+const mutationKey = ['removeWarpDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeWarpDevice>>, void> = () => {
+
+
+          return  removeWarpDevice(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveWarpDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof removeWarpDevice>>>
+
+    export type RemoveWarpDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove Warp Device
+ */
+export const useRemoveWarpDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeWarpDevice>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeWarpDevice>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRemoveWarpDeviceMutationOptions(options), queryClient);
     }
 
 export const getGetHostUrl = (hostId: number,) => {
