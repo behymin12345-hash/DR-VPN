@@ -31,6 +31,22 @@ INSTALL_CMD = (
     + " | tr -d \"\\r\" > /root/tor-ml.sh && chmod +x /root/tor-ml.sh && /root/tor-ml.sh --install'"
 )
 
+# DR-VPN RAM/ping tune for tor-ml (applied to the installed CLI, idempotent):
+# 1. drop per-destination SOCKS isolation so circuits are shared — fewer
+#    circuits, less RAM, warm/fast repeat connections (the exit is pinned per
+#    location anyway, so destination isolation buys nothing here);
+# 2. "weak" preset becomes the RAM-saver preset: 8 MB queue cap (was 16),
+#    30-minute circuit lifetime (was 15) so pings and connections stay warm.
+# All sed targets are unique strings inside tor-ml v4.4.
+TUNE_CMD = (
+    "bash -c 'cp -f /usr/local/bin/tor /usr/local/bin/tor.bak 2>/dev/null || true; "
+    "sed -i \"s/ IsolateDestAddr IsolateDestPort//\" /usr/local/bin/tor; "
+    "sed -i \"s/^MaxMemInQueues 16 MB$/MaxMemInQueues 8 MB/; "
+    "s/^NewCircuitPeriod 90$/NewCircuitPeriod 150/; "
+    "s/^MaxCircuitDirtiness 900$/MaxCircuitDirtiness 1800/\" /usr/local/bin/tor; "
+    "bash -n /usr/local/bin/tor'"
+)
+
 
 class LocationIdsRequest(BaseModel):
     ids: list[str] = Field(min_length=1, max_length=88)
@@ -71,6 +87,25 @@ async def _run_tor(args: list[str], timeout: float = 30) -> tuple[bool, str]:
         return False, f"{exc.__class__.__name__}: {exc}"
 
 
+async def apply_ram_tune() -> tuple[bool, str]:
+    """Apply the DR-VPN RAM/ping tune to the installed tor-ml CLI.
+
+    Idempotent sed patch (safe to run on every install/status call); keeps a
+    one-time .bak backup and syntax-checks the result.
+    """
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            TUNE_CMD,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+        ok = proc.returncode == 0 and "syntax error" not in out.decode(errors="replace").lower()
+        return ok, out.decode(errors="replace")[:300]
+    except (TimeoutError, OSError) as exc:
+        return False, f"{exc.__class__.__name__}: {exc}"
+
+
 async def _fetch_status() -> dict:
     ok, out = await _run_tor(["--json-status"], timeout=20)
     if not ok:
@@ -101,10 +136,22 @@ async def locations_status(
 async def install_tor_ml(
     _: AdminDetails = Depends(require_permission("settings", "update")),
 ):
-    """Install tor-ml on this server (the panel server itself). Long-running."""
+    """Install tor-ml on this server (the panel server itself). Long-running.
+
+    Always re-applies the DR-VPN RAM/ping tune afterwards — including on an
+    already-installed CLI, so clicking Install again on an old install also
+    upgrades it.
+    """
     ok, out = await _run_tor(["--json-status"], timeout=20)
     if ok:
-        return {"ok": True, "message": "tor-ml is already installed", "status": {"installed": True}}
+        tuned, tune_out = await apply_ram_tune()
+        return {
+            "ok": True,
+            "message": "tor-ml is already installed" + (" — RAM/ping tune applied" if tuned else ""),
+            "tuned": tuned,
+            "tune_output": tune_out,
+            "status": {"installed": True},
+        }
 
     proc = await asyncio.create_subprocess_shell(
         INSTALL_CMD,
@@ -120,10 +167,11 @@ async def install_tor_ml(
     tail = out.decode(errors="replace")[-600:]
     if proc.returncode != 0:
         raise HTTPExceptionServiceUnavailable(f"tor-ml install failed: {tail}")
+    tuned, tune_out = await apply_ram_tune()
     ok, _ = await _run_tor(["--json-status"], timeout=20)
     if not ok:
         raise HTTPExceptionServiceUnavailable(f"install finished but the CLI is not responding: {tail}")
-    return {"ok": True, "message": "tor-ml installed", "log_tail": tail}
+    return {"ok": True, "message": "tor-ml installed", "tuned": tuned, "tune_output": tune_out, "log_tail": tail}
 
 
 def HTTPExceptionServiceUnavailable(detail: str):
