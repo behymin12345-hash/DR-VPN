@@ -3,7 +3,7 @@
  * Do not edit manually.
  * DR-VPN API
  * Unified GUI Censorship Resistant Solution — DR-VPN, based on PasarGuard
- * OpenAPI spec version: 0.1.14
+ * OpenAPI spec version: 0.1.15
  */
 import {
   useMutation,
@@ -2225,6 +2225,7 @@ export interface ProxyClientCreate {
   data_limit?: number | null;
   expire?: number | null;
   usage_coefficient?: number | null;
+  ip_limit?: number | null;
   note?: string | null;
 }
 
@@ -2233,6 +2234,7 @@ export interface ProxyClientModify {
   data_limit?: number | null;
   expire?: number | null;
   usage_coefficient?: number | null;
+  ip_limit?: number | null;
   note?: string | null;
   status?: string | null;
 }
@@ -2479,6 +2481,7 @@ export interface SmartSetupInboundReport {
   protocol: string;
   security: string;
   remark: string;
+  note?: string | null;
 }
 
 export interface SmartSetupRequest {
@@ -2494,7 +2497,13 @@ export interface SmartSetupRequest {
   base_port?: number;
   node_id?: number | null;
   include_vmess?: boolean | null;
+  /** subset of vless/vmess/ss; None = the assistant picks the best mix */
+  protocols?: string[] | null;
 }
+
+export type SmartSetupResponseGeo = { [key: string]: unknown } | null;
+
+export type SmartSetupResponseRealityDest = { [key: string]: unknown } | null;
 
 export interface SmartSetupResponse {
   ok: boolean;
@@ -2509,6 +2518,9 @@ export interface SmartSetupResponse {
   host_count: number;
   inbounds: SmartSetupInboundReport[];
   ports_to_open: number[];
+  geo?: SmartSetupResponseGeo;
+  reality_dest?: SmartSetupResponseRealityDest;
+  ss_cipher?: string | null;
   security_notes?: string[];
   warnings?: string[];
 }
@@ -2529,6 +2541,8 @@ export interface SubscriptionUserResponse {
   on_hold_timeout?: string | number | null;
   group_ids?: number[] | null;
   hwid_limit?: number | null;
+  /** max simultaneous unique IPs; null = unlimited */
+  ip_limit?: number | null;
   next_plan?: NextPlanModel | null;
   id: number;
   username: string;
@@ -2661,6 +2675,8 @@ export interface UserCreate {
   group_ids?: number[] | null;
   auto_delete_in_days?: number | null;
   hwid_limit?: number | null;
+  /** max simultaneous unique IPs; null = unlimited */
+  ip_limit?: number | null;
   next_plan?: NextPlanModel | null;
   username: string;
   status?: UserStatus | null;
@@ -2718,6 +2734,8 @@ export interface UserListItem {
   group_ids?: number[] | null;
   auto_delete_in_days?: number | null;
   hwid_limit?: number | null;
+  /** max simultaneous unique IPs; null = unlimited */
+  ip_limit?: number | null;
   next_plan?: NextPlanModel | null;
   id: number;
   username: string;
@@ -2751,6 +2769,8 @@ export interface UserModify {
   group_ids?: number[] | null;
   auto_delete_in_days?: number | null;
   hwid_limit?: number | null;
+  /** max simultaneous unique IPs; null = unlimited */
+  ip_limit?: number | null;
   next_plan?: NextPlanModel | null;
   status?: UserStatus | null;
 }
@@ -2774,6 +2794,8 @@ export interface UserResponse {
   group_ids?: number[] | null;
   auto_delete_in_days?: number | null;
   hwid_limit?: number | null;
+  /** max simultaneous unique IPs; null = unlimited */
+  ip_limit?: number | null;
   next_plan?: NextPlanModel | null;
   id: number;
   username: string;
@@ -2845,6 +2867,7 @@ export interface UserTemplateCreate {
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
   hwid_limit?: number | null;
+  ip_limit?: number | null;
   /** expire_duration can be 0 or greater in seconds */
   expire_duration?: number | null;
   username_prefix?: string | null;
@@ -2863,6 +2886,7 @@ export interface UserTemplateModify {
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
   hwid_limit?: number | null;
+  ip_limit?: number | null;
   /** expire_duration can be 0 or greater in seconds */
   expire_duration?: number | null;
   username_prefix?: string | null;
@@ -2881,6 +2905,7 @@ export interface UserTemplateResponse {
   /** data_limit can be 0 or greater */
   data_limit?: number | null;
   hwid_limit?: number | null;
+  ip_limit?: number | null;
   /** expire_duration can be 0 or greater in seconds */
   expire_duration?: number | null;
   username_prefix?: string | null;

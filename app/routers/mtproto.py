@@ -89,6 +89,7 @@ async def create_proxy_client(
         data_limit=new_client.data_limit,
         expire=new_client.expire,
         usage_coefficient=new_client.usage_coefficient,
+        ip_limit=new_client.ip_limit,
         note=new_client.note,
     )
 
@@ -108,6 +109,7 @@ async def modify_proxy_client(
         data_limit=modified.data_limit,
         expire=modified.expire,
         usage_coefficient=modified.usage_coefficient,
+        ip_limit=modified.ip_limit,
         note=modified.note,
         status=modified.status,
     )

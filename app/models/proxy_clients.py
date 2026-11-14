@@ -16,6 +16,7 @@ class ProxyClientCreate(BaseModel):
     data_limit: int | None = Field(default=None, ge=0)
     expire: int | None = Field(default=None, ge=0)
     usage_coefficient: float | None = Field(default=None, ge=0, le=100)
+    ip_limit: int | None = Field(default=None, ge=0)
     note: str | None = None
 
     @field_validator("username")
@@ -29,5 +30,6 @@ class ProxyClientModify(BaseModel):
     data_limit: int | None = Field(default=None, ge=0)
     expire: int | None = Field(default=None, ge=0)
     usage_coefficient: float | None = Field(default=None, ge=0, le=100)
+    ip_limit: int | None = Field(default=None, ge=0)
     note: str | None = None
     status: str | None = Field(default=None, pattern="^(active|disabled|on_hold)$")

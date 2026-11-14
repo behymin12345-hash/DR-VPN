@@ -1369,6 +1369,8 @@ async def modify_user(
 
     if modify.hwid_limit is not None:
         db_user.hwid_limit = modify.hwid_limit
+    if modify.ip_limit is not None:
+        db_user.ip_limit = modify.ip_limit
 
     if "next_plan" in modify.model_fields_set:
         if modify.next_plan is not None:

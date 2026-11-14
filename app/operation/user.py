@@ -212,6 +212,11 @@ class UserOperation(BaseOperation):
             db_user.hwid_limit = None
 
     @staticmethod
+    def _apply_explicit_null_ip_limit(db_user: User, modified_user: UserModify) -> None:
+        if "ip_limit" in modified_user.model_fields_set and modified_user.ip_limit is None:
+            db_user.ip_limit = None
+
+    @staticmethod
     def _format_validation_errors(error: ValidationError) -> str:
         return "; ".join(
             [f"{'.'.join(str(loc_part) for loc_part in err['loc'])}: {err['msg']}" for err in error.errors()]
@@ -857,6 +862,7 @@ class UserOperation(BaseOperation):
             before = await node_payload_signature(db_user)
 
         self._apply_explicit_null_hwid_limit(db_user, modified_user)
+        self._apply_explicit_null_ip_limit(db_user, modified_user)
         try:
             db_user = await crud_modify_user(db, db_user, modified_user, groups=validated_groups)
         except ValueError as exc:  # WireGuard subnet exhausted
@@ -1705,6 +1711,7 @@ class UserOperation(BaseOperation):
             "data_limit_reset_strategy": template.data_limit_reset_strategy,
             "status": template.status,
             "hwid_limit": template.hwid_limit,
+            "ip_limit": template.ip_limit,
             "next_plan": None,
         }
 
@@ -1956,6 +1963,7 @@ class UserOperation(BaseOperation):
 
             for db_user, modified_user_model, validated_groups, _, _ in prepared_updates:
                 self._apply_explicit_null_hwid_limit(db_user, modified_user_model)
+                self._apply_explicit_null_ip_limit(db_user, modified_user_model)
                 await crud_modify_user(
                     db,
                     db_user,

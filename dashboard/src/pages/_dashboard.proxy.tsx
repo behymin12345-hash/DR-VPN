@@ -118,6 +118,7 @@ interface ClientFormValue {
   dataLimitGb: string
   expireDays: string
   coefficient: string
+  ipLimit: string
   groupIds: number[]
 }
 
@@ -126,6 +127,7 @@ const emptyClientForm: ClientFormValue = {
   dataLimitGb: '',
   expireDays: '',
   coefficient: '1',
+  ipLimit: '',
   groupIds: [],
 }
 
@@ -295,6 +297,7 @@ export default function ProxyPage() {
       dataLimitGb: client.data_limit ? String(Math.round((client.data_limit / GB) * 100) / 100) : '',
       expireDays: '',
       coefficient: client.usage_coefficient ? String(client.usage_coefficient) : '1',
+      ipLimit: client.ip_limit != null ? String(client.ip_limit) : '',
       groupIds: client.group_ids ?? [],
     })
     setClientDialogOpen(true)
@@ -326,6 +329,7 @@ export default function ProxyPage() {
           data_limit: dataLimit,
           expire,
           usage_coefficient: coefficient,
+          ip_limit: clientForm.ipLimit.trim() ? Number(clientForm.ipLimit) : null,
         }
         await modifyClientMutation.mutateAsync({ username: editingClient.username, data })
         toast.success('Client updated')
@@ -336,6 +340,7 @@ export default function ProxyPage() {
           data_limit: dataLimit,
           expire,
           usage_coefficient: coefficient,
+          ip_limit: clientForm.ipLimit.trim() ? Number(clientForm.ipLimit) : null,
         }
         await createClientMutation.mutateAsync({ data })
         toast.success(`Client "${username}" created`)
@@ -836,6 +841,20 @@ export default function ProxyPage() {
               />
               <p className="text-muted-foreground text-[11px]">
                 Multiplies this client's counted traffic — 2 makes their quota burn twice as fast.
+              </p>
+            </div>
+            <div className="grid gap-1">
+              <Label>IP Limit</Label>
+              <Input
+                type="number"
+                min="0"
+                value={clientForm.ipLimit}
+                onChange={(e) => setClientForm({ ...clientForm, ipLimit: e.target.value })}
+                placeholder="empty = unlimited"
+              />
+              <p className="text-muted-foreground text-[11px]">
+                Max simultaneous unique IPs — over the limit the client is auto-disabled and auto-re-enabled when the
+                extra IPs drop.
               </p>
             </div>
           </div>

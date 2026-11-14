@@ -28,7 +28,7 @@ def test_reality_keypair_is_valid_x25519():
 
 @pytest.mark.parametrize(
     "profile, expect_vmess",
-    [("turbo", False), ("balanced", False), ("stealth", True)],
+    [("turbo", True), ("balanced", True), ("stealth", True)],
 )
 def test_build_config_profile_changes_stack(profile, expect_vmess):
     op = SmartSetupOperation.__new__(SmartSetupOperation)

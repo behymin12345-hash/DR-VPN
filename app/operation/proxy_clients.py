@@ -74,6 +74,7 @@ class ProxyClientsOperation(BaseOperation):
         data_limit: int | None = None,
         expire: int | None = None,
         usage_coefficient: float | None = None,
+        ip_limit: int | None = None,
         note: str | None = None,
     ):
         group_ids = await self._filter_to_proxy_groups(db, group_ids)
@@ -83,6 +84,7 @@ class ProxyClientsOperation(BaseOperation):
             data_limit=data_limit,
             expire=expire,
             usage_coefficient=usage_coefficient if usage_coefficient is not None else 1.0,
+            ip_limit=ip_limit,
             note=note,
             status=UserStatus.active,
         )
@@ -100,6 +102,7 @@ class ProxyClientsOperation(BaseOperation):
         data_limit: int | None = None,
         expire: int | None = None,
         usage_coefficient: float | None = None,
+        ip_limit: int | None = None,
         note: str | None = None,
         status: str | None = None,
     ):
@@ -119,6 +122,7 @@ class ProxyClientsOperation(BaseOperation):
             data_limit=data_limit,
             expire=expire,
             usage_coefficient=usage_coefficient,
+            ip_limit=ip_limit,
             note=note,
             status=UserStatus(status) if status else None,
         )

@@ -38,6 +38,7 @@ export function SmartSetupButton({ canCreate }: { canCreate: boolean }) {
   const [basePort, setBasePort] = useState('443')
   const [nodeId, setNodeId] = useState('')
   const [result, setResult] = useState<SmartSetupResponse | null>(null)
+  const [protocols, setProtocols] = useState<{ vless: boolean; vmess: boolean; ss: boolean }>({ vless: true, vmess: true, ss: true })
 
   const setupMutation = useRunSmartSetup()
 
@@ -48,12 +49,18 @@ export function SmartSetupButton({ canCreate }: { canCreate: boolean }) {
     }
     const port = Number(basePort) || 443
     try {
+      const chosen = [
+        protocols.vless && 'vless',
+        protocols.vmess && 'vmess',
+        protocols.ss && 'ss',
+      ].filter(Boolean) as string[]
       const res = await setupMutation.mutateAsync({
         data: {
           domain: domain.trim(),
           base_port: port,
           node_id: nodeId ? Number(nodeId) : null,
           include_vmess: null,
+          protocols: chosen.length === 3 ? null : chosen,
         },
       })
       setResult(res)
@@ -97,6 +104,25 @@ export function SmartSetupButton({ canCreate }: { canCreate: boolean }) {
               <div className="grid gap-1">
                 <Label>Domain (points to this server)</Label>
                 <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="panel.example.com" />
+              </div>
+              <div className="grid gap-1">
+                <Label>Protocols to build (leave all on for the best mixed stack)</Label>
+                <div className="flex flex-wrap gap-4 rounded-md border p-3 text-sm">
+                  {([
+                    ['vless', 'VLESS (Reality + WS) — fastest & stealthiest'],
+                    ['vmess', 'VMess (WS) — for CDN relays'],
+                    ['ss', 'Shadowsocks 2022 — lightweight'],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={protocols[key]}
+                        onChange={e => setProtocols(p => ({ ...p, [key]: e.target.checked }))}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
@@ -146,6 +172,24 @@ export function SmartSetupButton({ canCreate }: { canCreate: boolean }) {
                 </div>
               </div>
 
+              {result.geo && (() => {
+                const geo = result.geo as { city?: string; country?: string; isp?: string }
+                return (
+                  <p className="text-muted-foreground text-xs">
+                    Server: {geo.city ? `${geo.city}, ` : ''}{geo.country} ({geo.isp})
+                  </p>
+                )
+              })()}
+              {result.reality_dest && (() => {
+                const dest = result.reality_dest as { host?: string; latency_ms?: number }
+                return (
+                  <p className="text-muted-foreground text-xs">
+                    REALITY camouflage target picked by probing: {dest.host}
+                    {dest.latency_ms != null ? ` (${dest.latency_ms} ms)` : ''}
+                  </p>
+                )
+              })()}
+              {result.ss_cipher && <p className="text-muted-foreground text-xs">Shadowsocks cipher: {result.ss_cipher}</p>}
               <div className="rounded-md border p-3">
                 <p className="mb-1 text-sm font-medium">
                   Core #{result.core_id} "{result.core_name}" · Group "{result.group_name}" · {result.host_count} hosts
@@ -162,7 +206,10 @@ export function SmartSetupButton({ canCreate }: { canCreate: boolean }) {
                   <tbody>
                     {result.inbounds.map((ib) => (
                       <tr key={ib.tag} className="border-t">
-                        <td className="py-1 font-medium">{ib.tag}</td>
+                        <td className="py-1 font-medium">
+                          {ib.tag}
+                          {ib.note && <p className="text-muted-foreground text-[10px]">{ib.note}</p>}
+                        </td>
                         <td>{ib.port}</td>
                         <td>{ib.protocol}</td>
                         <td>

@@ -13,11 +13,28 @@ DOMAIN_PATTERN = re.compile(
 )
 
 
+ALLOWED_PROTOCOLS = {"vless", "vmess", "ss"}
+
+
 class SmartSetupRequest(BaseModel):
     domain: str = Field(min_length=4, max_length=253)
     base_port: int = Field(default=443, ge=1, le=65535)
     node_id: int | None = None
     include_vmess: bool | None = None  # None = decide from the latency profile
+    protocols: list[str] | None = Field(
+        default=None, description="subset of vless/vmess/ss; None = the assistant picks the best mix"
+    )
+
+    @field_validator("protocols")
+    @classmethod
+    def validate_protocols(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [v.strip().lower() for v in value if v.strip()]
+        unknown = [v for v in cleaned if v not in ALLOWED_PROTOCOLS]
+        if unknown:
+            raise ValueError(f"unknown protocols: {', '.join(unknown)}")
+        return cleaned or None
 
     @field_validator("domain")
     @classmethod
@@ -34,6 +51,7 @@ class SmartSetupInboundReport(BaseModel):
     protocol: str
     security: str
     remark: str
+    note: str | None = None
 
 
 class SmartSetupResponse(BaseModel):
@@ -49,5 +67,8 @@ class SmartSetupResponse(BaseModel):
     host_count: int
     inbounds: list[SmartSetupInboundReport]
     ports_to_open: list[int]
+    geo: dict | None = None
+    reality_dest: dict | None = None
+    ss_cipher: str | None = None
     security_notes: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
