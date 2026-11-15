@@ -102,8 +102,8 @@ class SmartSetupOperation(BaseOperation):
         """Best-effort server geo from the free ip-api.com endpoint (no key)."""
 
         now = time.monotonic()
-        if self._GEO_CACHE["data"] and now - self._GEO_CACHE["at"] < 21600:
-            return self._GEO_CACHE["data"]
+        if _GEO_CACHE["data"] and now - _GEO_CACHE["at"] < 21600:
+            return _GEO_CACHE["data"]
         try:
             ip = None
             for probe_url in ("https://api.ipify.org", "https://ifconfig.me/ip"):
@@ -141,8 +141,8 @@ class SmartSetupOperation(BaseOperation):
                 "city": data.get("city"),
                 "isp": data.get("isp"),
             }
-            self._GEO_CACHE["data"] = geo
-            self._GEO_CACHE["at"] = now
+            _GEO_CACHE["data"] = geo
+            _GEO_CACHE["at"] = now
             return geo
         except Exception as exc:
             logger.debug("geo detection failed: %s", exc)
@@ -153,11 +153,14 @@ class SmartSetupOperation(BaseOperation):
         feasible one (TLS1.3 + h2 + x25519) — camouflage that is also close to
         the box means better mimicry AND lower handshake latency."""
         from app.models.reality_scan import RealityScanRequest
-        from app.operation.core import core_operator as scan_op
+        from app.operation import OperatorType as _OperatorType
+        from app.operation.core import CoreOperation
+
+        scan_op = CoreOperation(_OperatorType.API)
 
         now = time.monotonic()
-        if self._DEST_CACHE["data"] and now - self._DEST_CACHE["at"] < 1800:
-            return self._DEST_CACHE["data"]
+        if _DEST_CACHE["data"] and now - _DEST_CACHE["at"] < 1800:
+            return _DEST_CACHE["data"]
 
         async def probe(candidate: str):
             try:
@@ -165,7 +168,7 @@ class SmartSetupOperation(BaseOperation):
             except Exception:
                 return None
 
-        results = await asyncio.gather(*[probe(c) for c in self.REALITY_CANDIDATES])
+        results = await asyncio.gather(*[probe(c) for c in REALITY_CANDIDATES])
         feasible = [
             r for r in results if r is not None and r.feasible and r.tls13 and r.h2 and r.latency_ms is not None
         ]
@@ -181,8 +184,8 @@ class SmartSetupOperation(BaseOperation):
                 "probed": len(results),
                 "candidates_feasible": len(feasible),
             }
-        self._DEST_CACHE["data"] = dest
-        self._DEST_CACHE["at"] = now
+        _DEST_CACHE["data"] = dest
+        _DEST_CACHE["at"] = now
         return dest
 
     @staticmethod
